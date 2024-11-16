@@ -1,21 +1,23 @@
-# Use Node.js as the base image
-FROM node:18
+# Use Node.js 20.11.1 base image
+FROM node:20.11.1-alpine
 
-# Set the working directory
+# Set working directory
 WORKDIR /app
 
-# Copy package.json and install dependencies
+# Copy package.json and package-lock.json
 COPY package*.json ./
-RUN npm install
 
-# Copy the application code
+# Install dependencies
+RUN npm cache clean --force
+RUN npm install --legacy-peer-deps
+
+# Copy the rest of the application code
 COPY . .
 
-# Run Prisma generate
+# Generate Prisma Client code
 RUN npx prisma generate
 
-# Expose the backend port
-EXPOSE 3001
+EXPOSE 3000
 
-# Start the NestJS server
-CMD ["npm", "run", "start:dev"]
+# Command to run the app
+CMD ["npm", "run" "start:migrate:prod" ]

@@ -1,9 +1,13 @@
 import { useAuthContext } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
-import { EyeIcon, ListCheck, LogOut } from 'lucide-react';
+import { EyeIcon, ListCheck, LogOut, MoonIcon, SunIcon } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useDarkMode } from '@/hooks/useDarkMode';
 
 export const Navbar = () => {
+  const { logout } = useAuth();
   const { isAuthenticated } = useAuthContext();
+  const { isDark, toggle } = useDarkMode();
 
   return (
     <nav className="bg-gray-800 p-4 shadow-md">
@@ -22,15 +26,18 @@ export const Navbar = () => {
             </Button>
         </div>
 
-        {/* Logout Button - Right aligned */}
+        {/* Logout and Dark Mode Toggle Button - Right aligned */}
         {isAuthenticated && (
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
             <Button 
               variant="destructive" 
               className="text-white hover:bg-gray-700"
               onClick={logout}
             >
               <LogOut />
+            </Button>
+            <Button variant="ghost" className="text-white hover:bg-gray-700" onClick={toggle}>
+              {isDark ? <SunIcon /> : <MoonIcon />}
             </Button>
           </div>
         )}

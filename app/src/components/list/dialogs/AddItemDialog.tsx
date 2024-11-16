@@ -14,7 +14,7 @@ import { MinusIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { Checkbox } from "../../ui/checkbox";
 import { ListItem } from "@/types/list.types";
-import { v4 as uuidv4 } from "uuid";
+
 interface AddItemDialogProps {
   submitHandler: (item: Partial<ListItem>) => void;
 }
