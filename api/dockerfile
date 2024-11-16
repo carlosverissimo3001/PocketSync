@@ -1,0 +1,21 @@
+# Use Node.js as the base image
+FROM node:18
+
+# Set the working directory
+WORKDIR /app
+
+# Copy package.json and install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copy the application code
+COPY . .
+
+# Run Prisma generate
+RUN npx prisma generate
+
+# Expose the backend port
+EXPOSE 3001
+
+# Start the NestJS server
+CMD ["npm", "run", "start:dev"]
