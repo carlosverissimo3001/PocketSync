@@ -12,36 +12,52 @@
 - docker
 - pm2 (optional)
 
-## Initial Setup
+## Run the Backend
 
-1. Clone the project
-
-> git clone <ADD_LINK_HERE>
-
+1. Move into the `api` folder
+```sh
+cd api
+```
 2. Install dependencies, globally
-
-> npm install -g yarn pm2
-
+```sh
+npm install -g yarn
+```
 3. Ensure `prisma/.env` is set up correctly
-
 > should have `DATABASE_URL` set
+4. Install dependencies
+```sh
+yarn
+```
+5. Apply prisma migrations and generate the Prisma client
+```sh
+yarn prisma migrate dev
+yarn prisma generate
+```
+6. Start the server
+```sh
+npm run start:dev
+```
 
-## Running the project
+## Run the Frontend
 
-1. Install dependencies
+1. Move into the `app` folder
+```sh
+cd app # assuming you are in the root folder
+```
+2. Install dependencies
+```sh
+npm install
+```
+3. Start the development server
+```sh
+npm run dev
+```
 
-> yarn install
+## Prisma
 
-2. Generate Prisma client and apply migrations
+Prisma is the ORM used to interact with the database.
 
-> yarn prisma generate
-> yarn prisma migrate dev
-
-
-
-## Prisma 
-
-Prisma is used to interact with the database.
+The [schema](./api/prisma/schema.prisma) is the source of truth for the database. When you modify the schema, you need to generate the Prisma client to reflect the changes (it will create an `.sql` file in the `**prisma**/migrations` folder).
 
 ### Changing the Prisma schema
 
