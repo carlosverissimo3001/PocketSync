@@ -16,10 +16,11 @@ interface ListCardProps {
   list: List;
   updateList: (updatedList: List) => void;
   handleDelete: (listId: string) => void;
+  isOwner: boolean;
 }
 
-export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
-  const allCompleted = list.items.every((item) => item.checked);
+export const ListCard = ({ list, updateList, handleDelete, isOwner }: ListCardProps) => {
+  const allCompleted = list.items.every((item) => item.checked) && list.items.length > 0; 
   const createHandler = (item: Partial<ListItemType>) => {
     const newItem: ListItemType = {
       id: item.id || uuidv4(),
@@ -93,11 +94,13 @@ export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
       </CardContent>
       <CardFooter className="flex justify-center">
         <div className="flex gap-2">
-          <AddItemDialog submitHandler={createHandler} />
-          {list.items.length > 0 && (
-            <Button variant="destructive" onClick={() => handleDelete(list.id)}>
-              Delete List
-            </Button>
+          {isOwner && (
+            <>
+              <AddItemDialog submitHandler={createHandler} />
+              <Button variant="destructive" onClick={() => handleDelete(list.id)}>
+                Delete List
+              </Button>
+            </>
           )}
         </div>
       </CardFooter>

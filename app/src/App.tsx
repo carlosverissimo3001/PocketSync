@@ -5,6 +5,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { Navbar } from './components/Navbar'
 import { ProtectedRoute } from './components/misc/ProtectedRoute'
 import { useDarkMode } from './hooks/useDarkMode'
+import { ListViewPage } from './pages/ListViewPage'
 // import { ListView } from '.'
 
 function App() {
@@ -14,8 +15,8 @@ function App() {
 
   return (
     <AuthProvider>
-        <div className="min-h-screen bg-gray-50">
-          {!isLoginPage && <Navbar />}
+      <div className="min-h-screen bg-gray-50">
+        {!isLoginPage && <Navbar />}
           <main>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
@@ -27,12 +28,12 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              {/* <Route path="/dashboard/:id" element={<ListView />} /> */}
+              <Route path="/dashboard/:id" element={<ListViewPage />} />
               <Route path="/" element={<Navigate to="/login" replace />} />
             </Routes>
           </main>
         </div>
-      </AuthProvider>
+    </AuthProvider>
   )
 }
 

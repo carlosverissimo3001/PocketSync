@@ -1,4 +1,4 @@
-import { EyeOffIcon, EyeIcon } from "lucide-react";
+import { EyeOffIcon, EyeIcon, EyeClosedIcon } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Box } from "./box";
 import {
@@ -44,7 +44,7 @@ export function PasswordField({
                 className="absolute inset-y-0 right-0 flex cursor-pointer items-center p-3 text-muted-foreground"
                 onClick={() => setPasswordVisibility(!passwordVisibility)}
               >
-                {createElement(passwordVisibility ? EyeOffIcon : EyeIcon, {
+                {createElement(passwordVisibility ? EyeClosedIcon  : EyeIcon, {
                   className: "h-6 w-6",
                 })}
               </Box>

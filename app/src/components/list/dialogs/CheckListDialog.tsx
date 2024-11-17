@@ -3,59 +3,53 @@ import { Label } from "@radix-ui/react-label"
 import { Button } from "../../ui/button"
 import { DialogHeader, DialogFooter } from "../../ui/dialog"
 import { Input } from "../../ui/input"
-import { ListCheck } from "lucide-react"
+import { EyeIcon, ListCheck } from "lucide-react"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 
-interface AddListDialogProps {
-  submitHandler: (name: string) => void;
-}
-
-export const AddListDialog = ({ submitHandler }: AddListDialogProps) => {
+export const CheckListDialog = () => {
     const [open, setOpen] = useState(false);
-    const [name, setName] = useState("");
+    const [listId, setListId] = useState("");
+    const navigate = useNavigate();
 
     const onSubmit = (e?: React.FormEvent) => {
         e?.preventDefault();
-        if (name.trim()) {
-            submitHandler(name);
+        if (listId.trim()) {
             setOpen(false);
-            setName("");
+            setListId("");
         }
+
+        navigate(`/dashboard/${listId}`);
     }
     
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
-                    <ListCheck className="w-2 h-2 mr-1" />
-                    Add List
+                <Button variant="ghost" className="text-white hover:bg-gray-700">
+                    <EyeIcon className="w-4 h-4 mr-1" />
+                    Check Other User's List
                 </Button>
             </DialogTrigger>
             <DialogPortal>
-                <DialogContent className="fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] bg-zinc-50 dark:bg-zinc-900 p-6 rounded-lg border shadow-lg sm:max-w-[425px]">
-                    <DialogHeader>
-                        <DialogTitle>
-                            <p className="text-xl font-bold">Add List</p>
-                        </DialogTitle>
-                    </DialogHeader>
+                <DialogContent className="fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] bg-zinc-50 dark:bg-zinc-900 p-6 rounded-lg border shadow-lg sm:max-w-[800px]">
                     <form onSubmit={onSubmit}>
                         <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-4 items-center gap-4">
+                            <div className="grid grid-cols-8 items-center gap-4">
                                 <Label htmlFor="name" className="text-right">
-                                    Name
+                                    List ID
                                 </Label>
                                 <Input 
-                                    id="name" 
-                                    value={name} 
-                                    onChange={(e) => setName(e.target.value)} 
-                                    className="col-span-3" 
+                                    id="listId" 
+                                    value={listId} 
+                                    onChange={(e) => setListId(e.target.value)} 
+                                    className="col-span-7 bg-gray-700 text-white text-lg"
                                 />
                             </div>
                         </div>
                         <DialogFooter>
                             <Button type="button" variant="destructive" onClick={() => setOpen(false)}>Cancel</Button>
                             <Button type="submit" color="green">
-                                Create
+                                Go
                             </Button>
                         </DialogFooter>
                     </form>
@@ -64,3 +58,5 @@ export const AddListDialog = ({ submitHandler }: AddListDialogProps) => {
         </Dialog>
     )
 }
+
+export default CheckListDialog;

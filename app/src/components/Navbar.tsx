@@ -3,11 +3,14 @@ import { Button } from '../components/ui/button';
 import { EyeIcon, ListCheck, LogOut, MoonIcon, SunIcon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useDarkMode } from '@/hooks/useDarkMode';
+import { useState } from 'react';
+import { Input } from './ui/input';
+import { CheckListDialog } from './list/dialogs/CheckListDialog';
 
 export const Navbar = () => {
   const { logout } = useAuth();
-  const { isAuthenticated } = useAuthContext();
   const { isDark, toggle } = useDarkMode();
+
 
   return (
     <nav className="bg-gray-800 p-4 shadow-md">
@@ -18,29 +21,21 @@ export const Navbar = () => {
               <a href="/dashboard">Dashboard</a>
             </Button>
 
-            {/* // TODO: Will open a dialog for the user to type an id
-            // Will be redirected to /dashboard/:id  */}
-            <Button variant="ghost" className="text-white hover:bg-gray-700">
-              <EyeIcon />
-              <a href="#">Check other User's Lists</a>
-            </Button>
+            <CheckListDialog />
         </div>
-
-        {/* Logout and Dark Mode Toggle Button - Right aligned */}
-        {isAuthenticated && (
-          <div className="ml-auto flex items-center gap-2">
-            <Button 
-              variant="destructive" 
-              className="text-white hover:bg-gray-700"
-              onClick={logout}
-            >
-              <LogOut />
-            </Button>
-            <Button variant="ghost" className="text-white hover:bg-gray-700" onClick={toggle}>
-              {isDark ? <SunIcon /> : <MoonIcon />}
-            </Button>
-          </div>
-        )}
+            
+        <div className="ml-auto flex items-center gap-2">
+          <Button 
+            variant="destructive" 
+            className="text-white hover:bg-gray-700"
+            onClick={logout}
+          >
+            <LogOut />
+          </Button>
+          <Button variant="ghost" className="text-white hover:bg-gray-700" onClick={toggle}>
+            {isDark ? <SunIcon /> : <MoonIcon />}
+          </Button>
+        </div>
       </div>
     </nav>
   );

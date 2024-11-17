@@ -12,8 +12,8 @@ import { DialogHeader, DialogFooter } from "../../ui/dialog";
 import { Input } from "../../ui/input";
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
-import { Checkbox } from "../../ui/checkbox";
 import { ListItem } from "@/types/list.types";
+import { Switch } from "@/components/ui/switch";
 
 interface AddItemDialogProps {
   submitHandler: (item: Partial<ListItem>) => void;
@@ -25,14 +25,19 @@ export const AddItemDialog = ({ submitHandler }: AddItemDialogProps) => {
   const [quantity, setQuantity] = useState(1);
   const [checked, setChecked] = useState(false);
 
-  const onSubmit = () => {
+  const onSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    
     const item: Partial<ListItem> = {
       name,
       quantity: quantity,
       checked: checked,
     };
-    submitHandler(item);
-    setOpen(false);
+
+    if (name.length > 0) {
+      submitHandler(item);
+      setOpen(false);
+    }
   };
 
   return (
@@ -53,8 +58,9 @@ export const AddItemDialog = ({ submitHandler }: AddItemDialogProps) => {
               Create a new item for your list.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
+          <form onSubmit={onSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
                 Name
               </Label>
@@ -62,14 +68,14 @@ export const AddItemDialog = ({ submitHandler }: AddItemDialogProps) => {
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="col-span-3"
+                className="col-span-3 bg-gray-700 text-white"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="quantity" className="text-right">
                 Quantity
               </Label>
-              <div className="flex items-center justify-start gap-2 col-span-3">
+              <div className="flex items-center justify-center gap-2 col-span-3">
                 <Button
                   variant="outline"
                   size="icon"
@@ -79,24 +85,23 @@ export const AddItemDialog = ({ submitHandler }: AddItemDialogProps) => {
                   <PlusIcon className="w-4 h-4" />
                 </Button>
                 <span className="min-w-8 text-center">{quantity}</span>
-                {quantity !== 1 && (
                   <Button
+                    disabled={quantity === 1}
                     variant="outline"
                     size="icon"
-                    onClick={() => setQuantity(quantity - 1)}
+                      onClick={() => setQuantity(quantity - 1)}
                     className="hover:bg-gray-200 dark:hover:bg-gray-600"
                   >
-                    <MinusIcon className="w-4 h-4" />
-                  </Button>
-                )}
+                  <MinusIcon className="w-4 h-4" />
+                </Button>
               </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="checked" className="text-right">
-                Already Bought?
+                Checked?
               </Label>
               <div className="col-span-3">
-                <Checkbox
+                <Switch
                   id="checked"
                   checked={checked}
                   onCheckedChange={(checked) => setChecked(checked as boolean)}
@@ -108,10 +113,11 @@ export const AddItemDialog = ({ submitHandler }: AddItemDialogProps) => {
             <Button variant="destructive" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={onSubmit} color="green">
-              Create
+            <Button onClick={onSubmit}>
+              Add
             </Button>
-          </DialogFooter>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </DialogPortal>
     </Dialog>

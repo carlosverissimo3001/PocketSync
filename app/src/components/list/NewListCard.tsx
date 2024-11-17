@@ -27,7 +27,7 @@ export const NewListCard = ({ onAdd }: NewListCardProps) => {
     }, [isEditing]);
 
     return (
-        <div className="bg-gray-800/50 rounded-lg p-3 min-h-[40px] w-[200px] backdrop-blur-sm border border-gray-700/50 hover:border-gray-600/50 transition-all">
+        <div className="bg-white/50 dark:bg-gray-800/50 rounded-lg p-3 min-h-[40px] w-[200px] backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 hover:border-gray-300/50 dark:hover:border-gray-600/50 transition-all">
             {isEditing ? (
                 <form onSubmit={(e) => {e.preventDefault(); handleSubmit()}} className="flex h-full">
                     <CenterInput
@@ -35,8 +35,8 @@ export const NewListCard = ({ onAdd }: NewListCardProps) => {
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="List name"
-                        className="text-gray-300 placeholder-gray-400"
+                        placeholder=""
+                        className="text-gray-700 dark:text-gray-300 placeholder-gray-500 dark:placeholder-gray-400"
                         onBlur={() => !name && setIsEditing(false)}
                         onEnter={() => handleSubmit()}
                     />
@@ -44,7 +44,7 @@ export const NewListCard = ({ onAdd }: NewListCardProps) => {
             ) : (
                 <button
                     onClick={() => setIsEditing(true)}
-                    className="w-full h-full flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-white transition-colors"
+                    className="w-full h-full flex flex-col items-center justify-center gap-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                 >
                     <div className="flex items-center gap-2">
                         <PlusIcon className="w-4 h-4" />
