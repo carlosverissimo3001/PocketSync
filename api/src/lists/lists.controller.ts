@@ -1,14 +1,15 @@
 import { Controller, Post, Body, Get, Param } from '@nestjs/common';
 import { ListsService } from './lists.service';
 import { CreateListDto } from 'src/dtos/create-list.dto';
+import { List } from 'src/entities/list.entity';
 
 @Controller('lists')
 export class ListsController {
   constructor(private listsService: ListsService) {}
 
   @Post()
-  async createList(@Body() body: CreateListDto) {
-    return this.listsService.createList(body);
+  async listHandler(@Body() body: List[]) {
+    return this.listsService.listHandler(body);
   }
 
   @Get()
