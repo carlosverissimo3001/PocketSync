@@ -40,6 +40,7 @@ export const AddItemDialog = ({ submitHandler }: AddItemDialogProps) => {
     }
   };
 
+  //v1
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -79,6 +80,7 @@ export const AddItemDialog = ({ submitHandler }: AddItemDialogProps) => {
                 <Button
                   variant="outline"
                   size="icon"
+                  type="button"
                   onClick={() => setQuantity(quantity + 1)}
                   className="hover:bg-gray-200 dark:hover:bg-gray-600"
                 >
@@ -89,7 +91,8 @@ export const AddItemDialog = ({ submitHandler }: AddItemDialogProps) => {
                     disabled={quantity === 1}
                     variant="outline"
                     size="icon"
-                      onClick={() => setQuantity(quantity - 1)}
+                    type="button"
+                    onClick={() => setQuantity(quantity - 1)}
                     className="hover:bg-gray-200 dark:hover:bg-gray-600"
                   >
                   <MinusIcon className="w-4 h-4" />
@@ -110,10 +113,10 @@ export const AddItemDialog = ({ submitHandler }: AddItemDialogProps) => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="destructive" onClick={() => setOpen(false)}>
+            <Button variant="destructive" onClick={() => setOpen(false)} type="button">
               Cancel
             </Button>
-            <Button onClick={onSubmit}>
+            <Button type="submit">
               Add
             </Button>
             </DialogFooter>

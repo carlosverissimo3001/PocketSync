@@ -8,7 +8,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   setUser: (user: User | null) => void;
-  setToken: (token: string | null) => void;
+  setToken: (token: string, rememberMe?: boolean) => void;
   isAuthenticated: boolean;
   isInitialized: boolean;
   setIsInitialized: (value: boolean) => void;
@@ -62,9 +62,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     verifyAuth();
   }, []);
 
-  const handleSetToken = (newToken: string | null) => {
+  const handleSetToken = (newToken: string, rememberMe?: boolean) => {
     if (newToken) {
-      localStorage.setItem('token', newToken);
+      if (rememberMe) {
+        localStorage.setItem('token', newToken);
+      } else {
+        sessionStorage.setItem('token', newToken);
+      }
     } else {
       localStorage.removeItem('token');
       sessionStorage.removeItem('token');

@@ -4,9 +4,11 @@ import { useDarkMode } from '@/hooks/useDarkMode';
 import { CheckListDialog } from './list/dialogs/CheckListDialog';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthContext } from '@/contexts/AuthContext';
 
 export const Navbar = () => {
   const { logout } = useAuth()
+  const { isAuthenticated } = useAuthContext();
   const { isDark, toggle } = useDarkMode();
   const location = useLocation();
 
@@ -15,7 +17,6 @@ export const Navbar = () => {
       return location.pathname === '/dashboard';
     }
     if (path === '/dashboard/list') {
-      console.log(location.pathname);
       return location.pathname.startsWith('/dashboard/list/');
     }
     return false;
@@ -41,13 +42,15 @@ export const Navbar = () => {
         </div>
             
         <div className="ml-auto flex items-center gap-2">
+          {isAuthenticated && (
           <Button 
             variant="destructive" 
             className="text-white hover:bg-gray-700"
             onClick={logout}
           >
-            <LogOut />
-          </Button>
+              <LogOut />
+            </Button>
+          )}
           <Button variant="ghost" className="text-white hover:bg-gray-700" onClick={toggle}>
             {isDark ? <SunIcon /> : <MoonIcon />}
           </Button>

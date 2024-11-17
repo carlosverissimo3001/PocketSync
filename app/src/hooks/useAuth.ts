@@ -11,15 +11,17 @@ export const useAuth = () => {
     const navigate = useNavigate();
     
     const login = async (params: LoginCredentials) => {
+        const { rememberMe, ...creds } = params;
         setIsLoading(true);
         setError(null);
         
         try {
-            const response = await authApi.login(params);
+            const response = await authApi.login(creds);
             const { token, user } = response as AuthResponse;
 
             setUser(user);
-            setToken(token || null);            
+            setToken(token, rememberMe);
+                        
      
             navigate('/dashboard');
         

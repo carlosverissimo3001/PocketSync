@@ -11,24 +11,36 @@ import { formatDateToMMMDDYYYY } from "@/utils/date";
 import { ListItem } from "./ListItem";
 import { AddItemDialog } from "./dialogs/AddItemDialog";
 import { v4 as uuidv4 } from "uuid";
-import { Pencil } from "lucide-react";
 import { useState } from "react";
 import { Input } from "../ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 
 interface ListCardProps {
   list: List;
-  updateList: (updatedList: List) => void;
-  handleDelete: (listId: string) => void;
+  updateList: (list: List) => void;
+  handleDelete: (list: List) => void;
   isFromSingleView: boolean;
 }
 
-export const ListCard = ({ list, updateList, handleDelete, isFromSingleView }: ListCardProps) => {
+export const ListCard = ({
+  list,
+  updateList,
+  handleDelete,
+  isFromSingleView,
+}: ListCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(list.name);
-  const allCompleted = list.items.every((item) => item.checked) && list.items.length > 0; 
+  const allCompleted =
+    list.items.every((item) => item.checked) && list.items.length > 0;
+
   const createHandler = (item: Partial<ListItemType>) => {
     const newItem: ListItemType = {
-      id: item.id || uuidv4(),
+      id: uuidv4(),
       name: item.name || "",
       quantity: item.quantity || 1,
       checked: item.checked || false,
@@ -40,7 +52,7 @@ export const ListCard = ({ list, updateList, handleDelete, isFromSingleView }: L
     updateList({ ...list, items: updatedItems });
   };
 
-  const updateItem = (action: string, itemId: string) => {
+  const updateItem = (action: string, itemId: string, newName?: string) => {
     const updatedItems = list.items
       .map((item) => {
         if (item.id !== itemId) return item;
@@ -55,16 +67,14 @@ export const ListCard = ({ list, updateList, handleDelete, isFromSingleView }: L
           case "incrementQuantity":
             return { ...item, quantity: item.quantity + 1 };
           case "decrementQuantity":
-            if (item.quantity === 1) {
-              return null;
-            }
             return { ...item, quantity: item.quantity - 1 };
+          case "updateName":
+            return { ...item, name: newName || item.name };
           default:
             return item;
         }
       })
       .filter(Boolean) as ListItemType[];
-
     updateList({ ...list, items: updatedItems });
   };
 
@@ -94,24 +104,25 @@ export const ListCard = ({ list, updateList, handleDelete, isFromSingleView }: L
                 />
               </form>
             ) : (
-              <>
-                <span
-                  className={`text-xl font-bold ${
-                    allCompleted ? "line-through text-gray-500" : ""
-                  }`}
-                >
-                  {list.name}
-                </span>
-                {!isFromSingleView && (
-                  <button
-                    title="Edit List Name"
-                    onClick={() => setIsEditing(true)}
-                    className="hover:text-gray-700 dark:hover:text-gray-300"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                )}
-              </>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className={`text-xl font-bold ${
+                        allCompleted ? "line-through text-gray-500" : ""
+                      } ${
+                        !isFromSingleView
+                          ? "cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
+                          : ""
+                      }`}
+                      onClick={() => !isFromSingleView && setIsEditing(true)}
+                    >
+                      {list.name}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>Rename list</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
           <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -123,7 +134,12 @@ export const ListCard = ({ list, updateList, handleDelete, isFromSingleView }: L
         {list.items.length > 0 ? (
           <div className="space-y-2">
             {list.items.map((item) => (
-              <ListItem key={item.id} item={item} updateItem={updateItem} allowChange={!isFromSingleView}/>
+              <ListItem
+                key={item.id}
+                item={item}
+                updateItem={updateItem}
+                allowChange={!isFromSingleView}
+              />
             ))}
           </div>
         ) : (
@@ -137,7 +153,7 @@ export const ListCard = ({ list, updateList, handleDelete, isFromSingleView }: L
           {!isFromSingleView && (
             <>
               <AddItemDialog submitHandler={createHandler} />
-              <Button variant="destructive" onClick={() => handleDelete(list.id)}>
+              <Button variant="destructive" onClick={() => handleDelete(list)}>
                 Delete List
               </Button>
             </>

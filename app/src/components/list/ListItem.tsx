@@ -2,16 +2,28 @@ import { MinusIcon, PlusIcon, TrashIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { ListItem as ListItemType } from "@/types/list.types";
+import { useState } from "react";
+import { Input } from "../ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 type ListItemProps = {
   item: ListItemType;
-  updateItem: (action: string, itemId: string) => void;
+  updateItem: (action: string, itemId: string, newValue?: string) => void;
   allowChange: boolean;
 };
 
 export const ListItem = ({ item, updateItem, allowChange }: ListItemProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(item.name);
+
   const handleCheck = (checked: boolean) => {
     updateItem(checked ? "toggleChecked" : "toggleUnchecked", item.id);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateItem("updateName", item.id, editedName);
+    setIsEditing(false);
   };
 
   return (
@@ -39,13 +51,41 @@ export const ListItem = ({ item, updateItem, allowChange }: ListItemProps) => {
               </span>
             </>
           )}
-          <span
-            className={`font-medium text-gray-800 dark:text-gray-200 truncate ${
-              item.checked ? "line-through" : ""
-            }`}
-          >
-            {item.name}
-          </span>
+          {isEditing ? (
+            <form onSubmit={handleSubmit} className="flex-1">
+              <Input
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                className="h-8"
+                autoFocus
+                onBlur={handleSubmit}
+              />
+            </form>
+          ) : (
+            <div className="flex items-center gap-2 flex-1">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className={`font-medium text-gray-800 dark:text-gray-200 truncate ${
+                      item.checked ? "line-through" : ""
+                    } ${
+                      allowChange
+                        ? "cursor-pointer hover:text-gray-600 dark:hover:text-gray-300"
+                        : ""
+                    }`}
+                    onClick={() => allowChange && setIsEditing(true)}
+                  >
+                    {item.name}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Rename item
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
         </div>
       </div>
 

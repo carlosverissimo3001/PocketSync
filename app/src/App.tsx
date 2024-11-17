@@ -30,6 +30,7 @@ function App() {
               />
               <Route path="/dashboard/list/:id" element={<ListViewPage />} />
               <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </main>
         </div>
