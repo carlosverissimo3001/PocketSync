@@ -11,6 +11,9 @@ import { formatDateToMMMDDYYYY } from "@/utils/date";
 import { ListItem } from "./ListItem";
 import { AddItemDialog } from "./dialogs/AddItemDialog";
 import { v4 as uuidv4 } from "uuid";
+import { Pencil } from "lucide-react";
+import { useState } from "react";
+import { Input } from "../ui/input";
 
 interface ListCardProps {
   list: List;
@@ -20,6 +23,8 @@ interface ListCardProps {
 }
 
 export const ListCard = ({ list, updateList, handleDelete, isOwner }: ListCardProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(list.name);
   const allCompleted = list.items.every((item) => item.checked) && list.items.length > 0; 
   const createHandler = (item: Partial<ListItemType>) => {
     const newItem: ListItemType = {
@@ -63,17 +68,51 @@ export const ListCard = ({ list, updateList, handleDelete, isOwner }: ListCardPr
     updateList({ ...list, items: updatedItems });
   };
 
+  const editNameHandler = (newName: string) => {
+    updateList({ ...list, name: newName });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    editNameHandler(editedName);
+    setIsEditing(false);
+  };
+
   return (
     <Card className="transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span
-            className={`text-xl font-bold ${
-              allCompleted ? "line-through text-gray-500" : ""
-            }`}
-          >
-            {list.name}
-          </span>
+          <div className="flex items-center gap-2">
+            {isEditing ? (
+              <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                <Input
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  className="max-w-[200px]"
+                  autoFocus
+                  onBlur={handleSubmit}
+                />
+              </form>
+            ) : (
+              <>
+                <span
+                  className={`text-xl font-bold ${
+                    allCompleted ? "line-through text-gray-500" : ""
+                  }`}
+                >
+                  {list.name}
+                </span>
+                {isOwner && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="hover:text-gray-700 dark:hover:text-gray-300"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                )}
+              </>
+            )}
+          </div>
           <span className="text-sm text-gray-500 dark:text-gray-400">
             {list.createdAt ? formatDateToMMMDDYYYY(list.createdAt) : "N/A"}
           </span>
