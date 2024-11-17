@@ -1,27 +1,43 @@
-import { useAuthContext } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
-import { EyeIcon, ListCheck, LogOut, MoonIcon, SunIcon } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { ListCheck, LogOut, MoonIcon, SunIcon } from 'lucide-react';
 import { useDarkMode } from '@/hooks/useDarkMode';
-import { useState } from 'react';
-import { Input } from './ui/input';
 import { CheckListDialog } from './list/dialogs/CheckListDialog';
+import { useLocation } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 export const Navbar = () => {
-  const { logout } = useAuth();
+  const { logout } = useAuth()
   const { isDark, toggle } = useDarkMode();
+  const location = useLocation();
 
+  const isPathActive = (path: string) => {
+    if (path === '/dashboard') {
+      return location.pathname === '/dashboard';
+    }
+    if (path === '/dashboard/list') {
+      console.log(location.pathname);
+      return location.pathname.startsWith('/dashboard/list/');
+    }
+    return false;
+  };
 
   return (
     <nav className="bg-gray-800 p-4 shadow-md">
       <div className="container mx-auto flex items-center relative">
         <div className="absolute left-1/2 -translate-x-1/2 flex gap-2">
-            <Button variant="ghost" className="text-white hover:bg-gray-700">
+            <Button 
+              variant="ghost" 
+              className={`text-white hover:bg-gray-700 ${
+                isPathActive('/dashboard') ? 'bg-gray-700' : ''
+              }`}
+            >
               <ListCheck />
               <a href="/dashboard">Dashboard</a>
             </Button>
 
-            <CheckListDialog />
+            <CheckListDialog 
+              className={isPathActive('/dashboard/list') ? 'bg-gray-700' : ''}
+            />
         </div>
             
         <div className="ml-auto flex items-center gap-2">

@@ -19,7 +19,7 @@ export const ListDashboard = ({
                         list={list} 
                         updateList={onUpdateList}
                         handleDelete={onDeleteList}
-                        isOwner={true}
+                        isFromSingleView={false}
                     />
                 </div>
             ))}

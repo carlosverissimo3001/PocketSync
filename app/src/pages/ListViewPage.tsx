@@ -1,57 +1,27 @@
 import { ListCard } from "@/components/list/ListCard";
-import { List } from "@/types/list.types";
-//import { useParams } from "react-router-dom";
+import { ListExtended } from "@/types/list.types";
+import { useList } from "@/hooks/useList";
+import { useParams } from "react-router-dom";
+import { LoadingOverlay } from "@/components/misc/LoadingOverlay";
+import { useAuthContext } from "@/contexts/AuthContext";
 
 export const ListViewPage = () => {
-  const mockedList: List = {
-    id: "1",
-    name: "Groceries",
-    createdAt: new Date("2024-11-10"),
-    ownerId: "1",
-    items: [
-      {
-        id: "1",
-        name: "Milk",
-        quantity: 2,
-        checked: false,
-        listId: "1",
-      },
-      {
-        id: "2",
-        name: "Bread",
-        quantity: 1,
-        checked: false,
-        listId: "1",
-      }
-    ],
-  };
+  const { id } = useParams();
+  const { user } = useAuthContext();
+  const { data, isLoading } = useList(id!);
 
-  const list = null;
-
-  // TODO: Get list from API
-  // In the query, let's do include: user
-  // so that in the FE, we can display the owner's name
-  //const { listId } = useParams();
-  const userNameMocked = "John Doe";
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        {list ? (
-          <>
-          <div className="text-center mb-6">          
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white sm:text-4xl">
-              You are viewing <span className="text-indigo-600 dark:text-indigo-400">{userNameMocked}'s</span> list
-            </h1>
-          </div>
-            <ListCard list={list} updateList={() => {}} handleDelete={() => {}} isOwner={false} />
-          </>
-        ) : (
+  if (isLoading) return <LoadingOverlay />
+  
+  // Move this check before trying to use the data
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-xl mx-auto">
           <div className="text-center">
             <div className="mb-8">
               <span className="text-6xl">🔍</span>
             </div>          
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
               Oops! This list is playing hide and seek
             </h1>
             <p className="text-xl text-gray-500 dark:text-gray-400 mb-8">
@@ -66,7 +36,31 @@ export const ListViewPage = () => {
               </a>
             </div>
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
+
+  const list = data as ListExtended;
+  const isOwner = list.ownerId === user?.id;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-12">          
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white sm:text-4xl">
+            {isOwner ? (
+              <> This list is <span className="text-indigo-600 dark:text-indigo-400">yours</span></>
+            ) : (
+              <>
+                You are viewing <span className="text-indigo-600 dark:text-indigo-400">{list.owner.username}'s</span> list
+              </>
+            )}
+          </h1>
+        </div>
+        <div className="max-w-md mx-auto">
+          <ListCard list={list} updateList={() => {}} handleDelete={() => {}} isFromSingleView={true} />
+        </div>
       </div>
     </div>
   );

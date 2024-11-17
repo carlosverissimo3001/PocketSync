@@ -7,7 +7,11 @@ import { EyeIcon, ListCheck } from "lucide-react"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 
-export const CheckListDialog = () => {
+interface CheckListDialogProps {
+  className?: string;
+}
+
+export const CheckListDialog = ({ className }: CheckListDialogProps) => {
     const [open, setOpen] = useState(false);
     const [listId, setListId] = useState("");
     const navigate = useNavigate();
@@ -19,19 +23,24 @@ export const CheckListDialog = () => {
             setListId("");
         }
 
-        navigate(`/dashboard/${listId}`);
+        navigate(`/dashboard/list/${listId}`);
     }
     
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="ghost" className="text-white hover:bg-gray-700">
+                <Button variant="ghost" className={`text-white hover:bg-gray-700 ${className || ''}`}>
                     <EyeIcon className="w-4 h-4 mr-1" />
                     Check Other User's List
                 </Button>
             </DialogTrigger>
             <DialogPortal>
                 <DialogContent className="fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] bg-zinc-50 dark:bg-zinc-900 p-6 rounded-lg border shadow-lg sm:max-w-[800px]">
+                    <DialogHeader>
+                        <DialogTitle>
+                            <p className="text-xl font-bold">Check Other User's List</p>
+                        </DialogTitle>
+                    </DialogHeader>
                     <form onSubmit={onSubmit}>
                         <div className="grid gap-4 py-4">
                             <div className="grid grid-cols-8 items-center gap-4">

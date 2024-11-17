@@ -19,10 +19,10 @@ interface ListCardProps {
   list: List;
   updateList: (updatedList: List) => void;
   handleDelete: (listId: string) => void;
-  isOwner: boolean;
+  isFromSingleView: boolean;
 }
 
-export const ListCard = ({ list, updateList, handleDelete, isOwner }: ListCardProps) => {
+export const ListCard = ({ list, updateList, handleDelete, isFromSingleView }: ListCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(list.name);
   const allCompleted = list.items.every((item) => item.checked) && list.items.length > 0; 
@@ -102,8 +102,9 @@ export const ListCard = ({ list, updateList, handleDelete, isOwner }: ListCardPr
                 >
                   {list.name}
                 </span>
-                {isOwner && (
+                {!isFromSingleView && (
                   <button
+                    title="Edit List Name"
                     onClick={() => setIsEditing(true)}
                     className="hover:text-gray-700 dark:hover:text-gray-300"
                   >
@@ -122,7 +123,7 @@ export const ListCard = ({ list, updateList, handleDelete, isOwner }: ListCardPr
         {list.items.length > 0 ? (
           <div className="space-y-2">
             {list.items.map((item) => (
-              <ListItem key={item.id} item={item} updateItem={updateItem} />
+              <ListItem key={item.id} item={item} updateItem={updateItem} allowChange={!isFromSingleView}/>
             ))}
           </div>
         ) : (
@@ -133,7 +134,7 @@ export const ListCard = ({ list, updateList, handleDelete, isOwner }: ListCardPr
       </CardContent>
       <CardFooter className="flex justify-center">
         <div className="flex gap-2">
-          {isOwner && (
+          {!isFromSingleView && (
             <>
               <AddItemDialog submitHandler={createHandler} />
               <Button variant="destructive" onClick={() => handleDelete(list.id)}>

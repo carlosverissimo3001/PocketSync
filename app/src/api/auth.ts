@@ -11,7 +11,6 @@ class AuthError extends Error {
 export const authApi = {
   login: async (credentials: LoginCredentials) => {
     try {
-      console.log('calling login', import.meta.env.VITE_API_URL);
       const response = await api.post('/login', credentials);
       return response.data;
     } catch (error: any) {
