@@ -19,6 +19,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
 
 interface ListCardProps {
   list: List;
@@ -133,8 +144,10 @@ export const ListCard = ({
       <CardContent>
         {list.items.length > 0 ? (
           <div className="space-y-2">
-            {list.items.map((item) => (
-              <ListItem
+            {list.items
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((item) => (
+                <ListItem
                 key={item.id}
                 item={item}
                 updateItem={updateItem}
@@ -153,9 +166,29 @@ export const ListCard = ({
           {!isFromSingleView && (
             <>
               <AddItemDialog submitHandler={createHandler} />
-              <Button variant="destructive" onClick={() => handleDelete(list)}>
-                Delete List
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive">Delete List</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the list
+                      "{list.name}" and all its items.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => handleDelete(list)}
+                      className="bg-destructive hover:bg-destructive/90 text-black dark:text-white"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </>
           )}
         </div>

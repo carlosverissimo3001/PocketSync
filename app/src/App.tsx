@@ -6,8 +6,8 @@ import { Navbar } from './components/Navbar'
 import { ProtectedRoute } from './components/misc/ProtectedRoute'
 import { useDarkMode } from './hooks/useDarkMode'
 import { ListViewPage } from './pages/ListViewPage'
-// import { ListView } from '.'
-
+import { Toaster } from './components/ui/toaster'
+    
 function App() {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
@@ -17,23 +17,24 @@ function App() {
     <AuthProvider>
       <div className="min-h-screen bg-gray-50">
         {!isLoginPage && <Navbar />}
-          <main>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/dashboard/list/:id" element={<ListViewPage />} />
-              <Route path="/" element={<Navigate to="/login" replace />} />
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-          </main>
-        </div>
+        <main>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/dashboard/list/:id" element={<ListViewPage />} />
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </main>
+        <Toaster />
+      </div>
     </AuthProvider>
   )
 }

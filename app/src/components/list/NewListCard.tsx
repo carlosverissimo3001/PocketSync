@@ -44,7 +44,7 @@ export const NewListCard = ({ onAdd }: NewListCardProps) => {
             ) : (
                 <button
                     onClick={() => setIsEditing(true)}
-                    className="w-full h-full flex flex-col items-center justify-center gap-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                    className="w-full h-full flex flex-col items-center justify-center gap-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100/50 dark:hover:bg-gray-700/50 rounded-md transition-all duration-200"
                 >
                     <div className="flex items-center gap-2">
                         <PlusIcon className="w-4 h-4" />

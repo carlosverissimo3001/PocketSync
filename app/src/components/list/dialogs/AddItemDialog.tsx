@@ -25,6 +25,12 @@ export const AddItemDialog = ({ submitHandler }: AddItemDialogProps) => {
   const [quantity, setQuantity] = useState(1);
   const [checked, setChecked] = useState(false);
 
+  const clearState = () => {
+    setName("");
+    setQuantity(1);
+    setChecked(false);
+  };
+
   const onSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     
@@ -36,6 +42,7 @@ export const AddItemDialog = ({ submitHandler }: AddItemDialogProps) => {
 
     if (name.length > 0) {
       submitHandler(item);
+      clearState();
       setOpen(false);
     }
   };

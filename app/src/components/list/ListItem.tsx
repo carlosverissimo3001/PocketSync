@@ -4,7 +4,6 @@ import { Checkbox } from "../ui/checkbox";
 import { ListItem as ListItemType } from "@/types/list.types";
 import { useState } from "react";
 import { Input } from "../ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 type ListItemProps = {
   item: ListItemType;
@@ -27,26 +26,27 @@ export const ListItem = ({ item, updateItem, allowChange }: ListItemProps) => {
   };
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors mb-2">
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        {allowChange && (
+    <div className="flex items-center justify-between py-1.5 px-3 rounded-md bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors mb-1">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        {allowChange && ( 
           <Checkbox
             id={item.id}
             checked={item.checked}
             onCheckedChange={handleCheck}
+            className="h-4 w-4"
           />
         )}
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {item.quantity !== 1 && (
             <>
               <span
-                className={`text-sm text-gray-500 dark:text-gray-400 flex-shrink-0 ${
+                className={`text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 ${
                   item.checked ? "line-through" : ""
                 }`}
               >
                 {item.quantity}
               </span>
-              <span className="text-gray-400 dark:text-gray-500 flex-shrink-0">
+              <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
                 •
               </span>
             </>
@@ -56,46 +56,20 @@ export const ListItem = ({ item, updateItem, allowChange }: ListItemProps) => {
               <Input
                 value={editedName}
                 onChange={(e) => setEditedName(e.target.value)}
-                className="h-8"
+                className="h-6 text-sm"
                 autoFocus
                 onBlur={handleSubmit}
               />
             </form>
           ) : (
-            <div className="flex items-center gap-2 flex-1">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      className={`font-medium text-gray-800 dark:text-gray-200 truncate ${
-                      item.checked ? "line-through" : ""
-                    } ${
-                      allowChange
-                        ? "cursor-pointer hover:text-gray-600 dark:hover:text-gray-300"
-                        : ""
-                    }`}
-                    onClick={() => allowChange && setIsEditing(true)}
-                  >
-                    {item.name}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    Rename item
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+            <span className={`text-sm font-medium text-gray-800 dark:text-gray-200 truncate ${item.checked ? "line-through" : ""}`}>
+              {item.name}
+            </span>
           )}
         </div>
       </div>
 
-      <div
-        className={`flex items-center justify-end gap-1 border-l ${
-          item.quantity !== 1
-            ? "border-gray-200 dark:border-gray-600"
-            : "border-transparent"
-        } pl-4`}
-      >
+      <div className="flex items-center justify-end gap-1">
         {allowChange && (
           <>
             <div className="flex gap-1">
@@ -103,18 +77,18 @@ export const ListItem = ({ item, updateItem, allowChange }: ListItemProps) => {
                 variant="outline"
                 size="icon"
                 onClick={() => updateItem("incrementQuantity", item.id)}
-                className="hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="h-7 w-7"
               >
-                <PlusIcon className="w-4 h-4" />
+                <PlusIcon className="w-3.5 h-3.5" />
               </Button>
               {item.quantity !== 1 && (
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => updateItem("decrementQuantity", item.id)}
-                  className="hover:bg-gray-200 dark:hover:bg-gray-600"
+                  className="h-7 w-7"
                 >
-                  <MinusIcon className="w-4 h-4" />
+                  <MinusIcon className="w-3.5 h-3.5" />
                 </Button>
               )}
             </div>
@@ -122,9 +96,9 @@ export const ListItem = ({ item, updateItem, allowChange }: ListItemProps) => {
               variant="ghost"
               size="icon"
               onClick={() => updateItem("delete", item.id)}
-              className="ml-2 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30"
+              className="h-7 w-7 ml-1"
             >
-              <TrashIcon className="w-4 h-4" />
+              <TrashIcon className="w-3.5 h-3.5" />
             </Button>
           </>
         )}

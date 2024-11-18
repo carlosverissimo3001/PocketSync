@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { listService } from "@/services/listService";
+import { List } from "@/types/list.types";
 
 export const useList = (id: string) => {
     return useQuery({
@@ -9,10 +10,9 @@ export const useList = (id: string) => {
     });
 };
 
-export const useLists = () => {
-    return useQuery({
-        queryKey: ["lists"],
-        queryFn: () => listService.getLists(),
-        retry: false,
+export const useSyncLists = (lists: List[]) => {
+    return useMutation({
+        mutationKey: ["syncLists"],
+        mutationFn: (lists: List[]) => listService.syncLists(lists),
     });
 };

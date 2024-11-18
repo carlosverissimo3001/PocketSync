@@ -11,4 +11,11 @@ export const listService = {
     const { data } = await api.get<ListExtended>(`/lists/${id}`);
     return data;
   },
+
+  syncLists: async (lists: List[]): Promise<void> => {
+    // Won't return anything,
+    // The BE will handle the conflicts
+    // and then use ZMQ to notify the client using PUB/SUB
+    await api.post('/lists/', { lists });
+  },
 };      

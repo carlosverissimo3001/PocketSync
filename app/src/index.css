@@ -117,3 +117,48 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Smooth scrolling behavior for the whole app */
+* {
+  scroll-behavior: smooth;
+}
+
+/* Enable momentum-based scrolling on iOS */
+body {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Optional: For ultra-smooth scrolling on modern browsers */
+@media (prefers-reduced-motion: no-preference) {
+  :root {
+    scroll-behavior: smooth;
+  }
+  
+  .smooth-scroll {
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    /* For butter-smooth scrolling in modern browsers */
+    @supports (scrollbar-gutter: stable) {
+      scrollbar-gutter: stable;
+    }
+    /* Enable hardware acceleration */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000;
+    /* Prevent scroll anchoring from causing jumps */
+    overflow-anchor: none;
+  }
+}
+
+/* Hide scrollbars but keep functionality */
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
