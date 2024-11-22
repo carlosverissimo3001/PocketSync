@@ -93,25 +93,34 @@ export const SyncComponent = ({
             </span>
           </div>
           
-          <Button
-            onClick={onClick}
-            disabled={isLoading}
-            variant="ghost"
-            size="icon"
-            className={`
-              relative rounded-full p-3 ml-auto
-              ${isLoading 
-                ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' 
-                : 'hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400'
-              }
-              transition-all duration-200 ease-in-out
-            `}
-          >
-            <RefreshCcw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading && (
-              <span className="absolute inset-0 rounded-full animate-ping bg-indigo-200 dark:bg-indigo-700 opacity-25" />
-            )}
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={onClick}
+                  disabled={isLoading}
+                  variant="ghost"
+                  size="icon"
+                  className={`
+                    relative rounded-full p-3 ml-auto
+                    ${isLoading 
+                      ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' 
+                      : 'hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400'
+                    }
+                    transition-all duration-200 ease-in-out
+                  `}
+                >
+                  <RefreshCcw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+                  {isLoading && (
+                    <span className="absolute inset-0 rounded-full animate-ping bg-indigo-200 dark:bg-indigo-700 opacity-25" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Trigger an instant sync</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ export interface List {
     createdAt?: Date;
     ownerId: string;
     items: ListItem[];
+    updatedAt?: Date;
 }
 
 export interface ListExtended extends List {
@@ -19,4 +20,5 @@ export interface ListItem {
     checked: boolean;
     listId: string;
     createdAt?: Date;
+    updatedAt?: Date;
 }
