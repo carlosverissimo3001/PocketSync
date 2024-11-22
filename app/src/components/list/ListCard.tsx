@@ -56,6 +56,7 @@ export const ListCard = ({
       quantity: item.quantity || 1,
       checked: item.checked || false,
       createdAt: new Date(),
+      updatedAt: new Date(),
       listId: list.id,
     };
     const updatedItems = [...list.items, newItem];

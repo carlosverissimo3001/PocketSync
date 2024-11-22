@@ -4,5 +4,6 @@ export class ListItem {
   quantity: number;
   checked: boolean;
   createdAt: Date;
+  updatedAt: Date;
   listId: string;
 }

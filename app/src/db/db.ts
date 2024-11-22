@@ -10,8 +10,8 @@ class ShoppingListDB extends Dexie {
   constructor() {
     super("ShoppingListDB");
     this.version(1).stores({
-      lists: "id, name, ownerId, createdAt",
-      items: "id, listId, name, quantity, checked, createdAt",
+      lists: "id, name, ownerId, createdAt, updatedAt",
+      items: "id, listId, name, quantity, checked, createdAt, updatedAt",
     });
   }
 }

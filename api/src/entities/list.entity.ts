@@ -6,4 +6,5 @@ export class List {
   ownerId: string;
   createdAt: Date;
   items: ListItem[];
+  updatedAt: Date;
 }

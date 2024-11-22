@@ -28,6 +28,7 @@ model List {
   createdAt DateTime   @default(now()) @map("created_at")
   ownerId   String     @map("owner_id")
   owner     User       @relation(fields: [ownerId], references: [id])
+  updatedAt DateTime   @map("updated_at")
   items     ListItem[]
 }
 
@@ -36,6 +37,7 @@ model ListItem {
   name      String
   quantity  Int
   checked   Boolean  @default(false)
+  updatedAt DateTime @map("updated_at")
   listId    String   @map("list_id")
   list      List     @relation(fields: [listId], references: [id])
   createdAt DateTime @default(now()) @map("created_at")

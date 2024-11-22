@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateListDto } from 'src/dtos/create-list.dto';
 import { List } from 'src/entities/list.entity';
 @Injectable()
 export class ListsService {
@@ -8,8 +7,8 @@ export class ListsService {
 
   async listHandler(lists: List[]) {
     // TODO: Implement
-    // Logic: The many frontends, from time to time, will send a batch of lists to be created/updated.
-    // Make sure to handle conflicts between different frontends.
+    // Logic: The many front-ends, from time to time, will send a batch of lists to be created/updated.
+    // Make sure to handle conflicts between different front-ends.
     // We will handle it using CRDTs.
     // Both lists and items have a createdAt and updatedAt timestamp.
     // We can implement a LWW (Last Writer Wins) strategy to handle conflicts.

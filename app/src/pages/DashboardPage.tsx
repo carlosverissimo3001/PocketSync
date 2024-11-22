@@ -20,7 +20,7 @@ export const DashboardPage = () => {
   const { user } = useAuthContext();
   const [lists, setLists] = useState<List[]>();
   const { mutate: syncLists, isPending } = useSyncLists(lists ?? []);
-  const [syncFrequency, setSyncFrequency] = useState(30); // default 30 minutes
+  const [syncFrequency, setSyncFrequency] = useState(5); // default 5 minutes
   const { toast } = useToast();
 
   // This date will be the last time the BE returned the lists
@@ -35,11 +35,25 @@ export const DashboardPage = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    // No frequency or lists, no need to sync
+    if (!syncFrequency || !lists || lists.length === 0) return;
+  
+    const interval = setInterval(() => {
+      syncLists(lists);
+    }, syncFrequency * 60000); // To milliseconds
+  
+    return () => {
+      clearInterval(interval);
+    };
+  }, [syncFrequency, lists, syncLists]);
+
   const createListHandler = async (listName: string) => {
     const newList: List = {
       id: uuidv4(),
       name: listName,
       createdAt: new Date(),
+      updatedAt: new Date(),
       ownerId: user?.id ?? "",
       items: [],
     };
@@ -70,14 +84,12 @@ export const DashboardPage = () => {
   };
 
   const handleSync = () => {
-    if (!lists) return;
+    if (!lists || lists.length === 0) return;
     syncLists(lists);
   };
 
   const handleFrequencyChange = (minutes: number) => {
     setSyncFrequency(minutes);
-
-    // Will modify the cron job ? (not sure, tbd)
   };
 
   return (
