@@ -5,9 +5,24 @@ import { UsersModule } from './users/users.module';
 import { ListsModule } from './lists/lists.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ZmqModule } from './zmq/zmq.module';
+import { BullModule } from '@nestjs/bull';
+import { CrdtModule } from './crdt/crdt.module';
 
 @Module({
-  imports: [UsersModule, ListsModule, PrismaModule, ZmqModule],
+  imports: [
+    BullModule.forRoot({
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD,
+      },
+    }),
+    CrdtModule,
+    UsersModule,
+    ListsModule,
+    PrismaModule,
+    ZmqModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
