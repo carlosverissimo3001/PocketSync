@@ -19,7 +19,7 @@ import {
 interface SyncComponentProps {
   onClick: () => void;
   isLoading: boolean;
-  lastSync: Date;
+  lastSync: Date | null;
   onFrequencyChange?: (minutes: number) => void;
   currentFrequency?: number; // in minutes
 }
@@ -89,7 +89,7 @@ export const SyncComponent = ({
               Last synced
             </span>
             <span className="text-sm text-gray-700 dark:text-gray-300 font-semibold">
-              {xTimeAgo(lastSync)}
+              {lastSync ? xTimeAgo(lastSync) : 'Never'}
             </span>
           </div>
           

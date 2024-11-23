@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { SyncProvider } from './contexts/SyncContext'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { Navbar } from './components/Navbar'
@@ -15,8 +16,9 @@ function App() {
 
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-gray-50">
-        {!isLoginPage && <Navbar />}
+      <SyncProvider>
+        <div className="min-h-screen bg-gray-50">
+          {!isLoginPage && <Navbar />}
         <main>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -33,8 +35,9 @@ function App() {
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </main>
-        <Toaster />
-      </div>
+          <Toaster />
+        </div>
+      </SyncProvider>
     </AuthProvider>
   )
 }

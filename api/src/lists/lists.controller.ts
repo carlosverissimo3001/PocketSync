@@ -8,7 +8,6 @@ export class ListsController {
 
   @Post()
   async listHandler(@Body() body: List[]) {
-    console.log('Syncing lists', body);
     return this.listsService.listHandler(body);
   }
 

@@ -16,6 +16,6 @@ export const listService = {
     // Won't return anything,
     // The BE will handle the conflicts
     // and then use ZMQ to notify the client using PUB/SUB
-    await api.post('/lists/', { lists });
+    await api.post('/lists/', lists);
   },
 };      

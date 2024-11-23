@@ -29,13 +29,17 @@
     "date-fns": "^4.1.0",
     "dexie": "^4.0.10",
     "lucide-react": "^0.456.0",
+    "node-schedule": "^2.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.53.2",
     "react-router-dom": "^6.28.0",
+    "socket.io-client": "^4.8.1",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.0.3",
+    "ws": "^8.18.0",
+    "zeromq": "^6.1.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {

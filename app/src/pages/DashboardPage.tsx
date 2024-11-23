@@ -12,37 +12,49 @@ import {
 import { ListCard } from "@/components/list/ListCard";
 import { SyncComponent } from "@/components/misc/SyncComponent";
 import { useSyncLists } from "@/hooks/useList";
-import { subDays } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 import { ToastAction } from "@/components/ui/toast";
+import useSubscriber from "@/hooks/useSubscriber";
+import { useSync } from "@/contexts/SyncContext";
 
 export const DashboardPage = () => {
   const { user } = useAuthContext();
-  const [lists, setLists] = useState<List[]>();
-  const { mutate: syncLists, isPending } = useSyncLists(lists ?? []);
+  const [lists, setLists] = useState<List[]>([]);
+  const { mutate: syncLists, isPending } = useSyncLists();
   const [syncFrequency, setSyncFrequency] = useState(5); // default 5 minutes
   const { toast } = useToast();
+  const { lastSync, fetchLastSync } = useSync();
 
-  // This date will be the last time the BE returned the lists
-  // For now, let's mock it
-  const mockedLastSync = new Date(subDays(new Date(), 5));
+  // Hook to fetch last sync time
+  useEffect(() => {
+    if (user?.id) {
+      fetchLastSync();
+    }
+  }, [user?.id, fetchLastSync]);
 
+  // Hook to subscribe to socket.io events
+  useSubscriber(user?.id ?? '');
+
+  // Hook to fetch lists from local storage
+  // Refetch lists when last sync time changes
   useEffect(() => {
     const fetchData = async () => {
       const data = await fetchListsWithItems();
       setLists(data);
     };
     fetchData();
-  }, []);
+  }, [lastSync]);
 
+  // Hook to sync lists with server based on frequency
+  // Is updated when frequency or lists change
   useEffect(() => {
     // No frequency or lists, no need to sync
     if (!syncFrequency || !lists || lists.length === 0) return;
-  
+
     const interval = setInterval(() => {
       syncLists(lists);
     }, syncFrequency * 60000); // To milliseconds
-  
+
     return () => {
       clearInterval(interval);
     };
@@ -83,9 +95,24 @@ export const DashboardPage = () => {
     await deleteList(list.id);
   };
 
-  const handleSync = () => {
+  const handleSync = async () => {
     if (!lists || lists.length === 0) return;
-    syncLists(lists);
+    
+    try {
+      syncLists(lists);
+      toast({
+        title: "Sync request sent",
+        description: "Your lists will be synchronized soon",
+        duration: 2000,
+      });
+    } catch (error) {
+      toast({
+        title: "Sync failed",
+        description: "Failed to synchronize your lists. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
   };
 
   const handleFrequencyChange = (minutes: number) => {
@@ -110,11 +137,11 @@ export const DashboardPage = () => {
 
         {lists?.length ? (
           <div className="mt-6">
-            <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
+            <div className="flex flex-wrap justify-center gap-6">
               {lists?.map((list) => (
                 <div
                   key={list.id}
-                  className="break-inside-avoid mb-6 hover:scale-102 transition-transform"
+                  className="break-inside-avoid hover:scale-102 transition-transform w-[400px]"
                 >
                   <ListCard
                     list={list}
@@ -158,7 +185,7 @@ export const DashboardPage = () => {
         <SyncComponent
           onClick={handleSync}
           isLoading={isPending}
-          lastSync={mockedLastSync}
+          lastSync={lastSync}
           currentFrequency={syncFrequency}
           onFrequencyChange={handleFrequencyChange}
         />
