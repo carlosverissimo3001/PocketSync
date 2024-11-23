@@ -43,3 +43,7 @@ export const deleteList = async (listId: string) => {
     await db.lists.delete(listId);
   });
 };
+
+export const getLastSync = async () => {
+  return db.serverSyncs.orderBy("lastSync").last();
+};
