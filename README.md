@@ -15,12 +15,10 @@ SDLE Second Assignment of group T&lt;m&gt;&lt;n&gt;G&lt;p&gt;&lt;q&gt;.
 - [`api`](./api) - The API server
 - [`app`](./app) - The web app
 - [`docs`](./docs) - Documentation
+- [`bridge`](./bridge)
+  - In other to use ZeroMQ to its full extent, we establish a PUB/SUB relationship between the API and a server, we call "the Bridge".
+  - Then, using Socket.IO, the bridge will forward the messages to the web app.
 
-## Requirements
-
-- yarn
-- docker
-- pm2 (optional)
 
 ## Run the Backend
 
@@ -75,6 +73,26 @@ npm install
 
 ```sh
 npm run dev
+```
+
+## Run the Bridge
+
+1. Move into the `bridge` folder
+
+```sh
+cd bridge
+```
+
+2. Install dependencies
+
+```sh
+npm install
+```
+
+3. Start the bridge
+
+```sh
+npm start
 ```
 
 ## Prisma
