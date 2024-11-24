@@ -19,47 +19,35 @@ export class CrdtConsumer {
   // 2. A user has edited a single list, through the single-list viewer.
   @Process('resolve-conflicts')
   async handleConflicts(job: Job<{ userId: string; lists: List[] }>) {
-    const { userId, lists } = job.data;
+    let userId = job.data.userId;
+    const lists = job.data.lists;
 
     // At this point, if we were not sent lists, then one of two things happened:
     // 1. This was a FE that requested all lists for a user.
     // 2. This was a FE that deleted all lists for a user, and then synced.
-
-    // TODO: Handle the second one gracefully.
     if (lists.length === 0) {
-      let lists = await this.prisma.list.findMany({
-        where: { ownerId: userId },
-        include: { items: true },
-      });
-
-      if (lists.length === 0) {
-        // This user has no lists, what a shame :/
-        // let's create them a default one.
-        await this.prisma.list.create({
-          data: buildSampleList(userId),
-        });
-      }
-
-      // Refresh the lists
-      lists = await this.prisma.list.findMany({
-        where: { ownerId: userId },
-        include: { items: true },
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      return this.zmqService.publishUserLists(userId, lists);
+      // TODO: Should this be a separate flow? Or can we handle it
+      // just like other changes below?
+    } else if (userId !== lists[0].ownerId) {
+      // This means that another user Y has edited user's X list
+      // The real "owner" of the list is X, and Y is just a viewer.
+      userId = lists[0].ownerId;
     }
-
-    // TODO: Implement conflict resolution.
-    // After returning, will publish the lists to the user using ZeroMQ.
 
     // For now, just simulate a delay
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    // And publish the lists to the user
-    // with a small change so we know it's from the CRDT
-    lists[0].name = 'Hello from CRDT';
-    await this.zmqService.publishUserLists(userId, lists);
+    // And return a sample list to know that the publisher is working
+    await this.prisma.list.create({
+      data: buildSampleList(userId),
+    });
+    const resolvedLists = await this.prisma.list.findMany({
+      where: { ownerId: userId },
+      include: { items: true },
+    });
+
+    // This should be the exit point of the function.
+    // Will publish the resolved lists to all this user's FEs
+    await this.zmqService.publishUserLists(userId, resolvedLists);
   }
 }
