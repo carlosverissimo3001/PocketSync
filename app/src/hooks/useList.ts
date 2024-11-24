@@ -1,7 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { listService } from "@/services/listService";
 import { List } from "@/types/list.types";
-import { useSync } from "@/contexts/SyncContext";
 
 export const useList = (id: string) => {
     return useQuery({
@@ -20,14 +19,9 @@ export const useUpdateList = () => {
 };
 
 export const useSyncLists = () => {
-    const { updateLastSync } = useSync();
-
     return useMutation({
         mutationKey: ["syncLists"],
         mutationFn: ({ lists, userId }: { lists: List[], userId: string }) => 
             listService.syncLists(lists, userId),
-        onSuccess: async (_, { lists }) => {
-            await updateLastSync(lists.length);
-        },
     });
 };
