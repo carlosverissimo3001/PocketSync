@@ -23,10 +23,11 @@ export const DashboardPage = () => {
   const { user } = useAuthContext();
   const { initializeUserDB } = useDB();
   const [lists, setLists] = useState<List[]>([]);
-  const { mutate: syncLists, isPending, isError } = useSyncLists();
+  const { mutate: syncLists, isPending } = useSyncLists();
   const [syncFrequency, setSyncFrequency] = useState(5); // default 5 minutes
   const { toast } = useToast();
   const { lastSync, fetchLastSync } = useSync();
+  const [isServerAlive, setIsServerAlive] = useState<boolean>(false);
 
   // Initialize DB when user is available
   useEffect(() => {
@@ -66,6 +67,27 @@ export const DashboardPage = () => {
       clearInterval(interval);
     };
   }, [syncFrequency, lists, syncLists, user?.id]);
+
+  // Check server health
+  useEffect(() => {
+    const checkServerHealth = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/`);
+        setIsServerAlive(response.ok);
+      } catch (error) {
+        setIsServerAlive(false);
+        console.error(error);
+      }
+    };
+
+    // Initial check
+    checkServerHealth();
+
+    // Set up interval
+    const interval = setInterval(checkServerHealth, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   const createListHandler = async (listName: string) => {
     const newList: List = {
@@ -215,6 +237,7 @@ export const DashboardPage = () => {
           lastSync={lastSync}
           currentFrequency={syncFrequency}
           onFrequencyChange={handleFrequencyChange}
+          isServerAlive={isServerAlive}
         />
       </div>
     </div>
