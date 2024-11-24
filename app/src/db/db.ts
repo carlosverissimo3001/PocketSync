@@ -1,19 +1,19 @@
-import { List, ListItem } from "@/types/list.types";
 import Dexie, { Table } from "dexie";
+import { List, ListItem } from "@/types/list.types";
 
 type ListWithoutItems = Omit<List, 'items'>;
 
-class ShoppingListDB extends Dexie {
+export class ShoppingListDB extends Dexie {
   lists!: Table<ListWithoutItems>; 
   items!: Table<ListItem>; 
   serverSyncs!: Table<{
     id: string;
-    listLength: number; // number of lists synced
-    lastSync: Date; // last sync date
+    listLength: number;
+    lastSync: Date;
   }>;
 
-  constructor() {
-    super("ShoppingListDB");
+  constructor(userId: string) {
+    super(`ShoppingListDB_${userId}`);
     this.version(1).stores({
       lists: "id, name, ownerId, createdAt, updatedAt",
       items: "id, listId, name, quantity, checked, createdAt, updatedAt",
@@ -22,5 +22,26 @@ class ShoppingListDB extends Dexie {
   }
 }
 
-const db = new ShoppingListDB();
-export default db;
+let currentDB: ShoppingListDB | null = null;
+
+export const initializeDB = (userId: string) => {
+  currentDB = new ShoppingListDB(userId);
+  return currentDB;
+};
+
+export const closeDB = async () => {
+  if (currentDB) {
+    await currentDB.close();
+    currentDB = null;
+  }
+};
+
+export const getCurrentDB = () => {
+  if (!currentDB) {
+    throw new Error('Database not initialized. Call initializeDB first.');
+  }
+  return currentDB;
+};
+
+// Export everything needed
+export type { ListWithoutItems };

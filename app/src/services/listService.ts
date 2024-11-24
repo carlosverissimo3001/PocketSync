@@ -12,10 +12,14 @@ export const listService = {
     return data;
   },
 
-  syncLists: async (lists: List[]): Promise<void> => {
+  syncLists: async (lists: List[], userId: string): Promise<void> => {
     // Won't return anything,
     // The BE will handle the conflicts
     // and then use ZMQ to notify the client using PUB/SUB
-    await api.post('/lists/', lists);
+    await api.post('/lists/', { lists, userId });
+  },
+
+  updateList: async (list: List, userId: string): Promise<void> => {
+    await api.put(`/lists/update`, { lists: [list], userId });
   },
 };      

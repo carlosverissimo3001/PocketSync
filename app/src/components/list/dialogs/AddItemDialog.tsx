@@ -47,85 +47,92 @@ export const AddItemDialog = ({ submitHandler }: AddItemDialogProps) => {
     }
   };
 
-  //v1
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <PlusIcon className="w-2 h-2 mr-1" />
+        <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-200">
+          <PlusIcon className="w-4 h-4" />
           Add Item
         </Button>
       </DialogTrigger>
       <DialogPortal>
-        <DialogContent className="fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] bg-zinc-50 dark:bg-zinc-900 p-6 rounded-lg border shadow-lg sm:max-w-[425px]">
-          <DialogHeader>
+        <DialogContent className="fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-800 p-8 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-[0_0_50px_rgba(0,0,0,0.15)] dark:shadow-[0_0_50px_rgba(0,0,0,0.5)] w-[90vw] max-w-[425px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-3 mb-8">
             <DialogTitle>
-              <p className="text-xl font-bold">Add Item</p>
+              <h2 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">Add Item</h2>
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm text-zinc-600 dark:text-zinc-300">
               Create a new item for your list.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={onSubmit}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="col-span-3 bg-gray-700 text-white"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="quantity" className="text-right">
-                Quantity
-              </Label>
-              <div className="flex items-center justify-center gap-2 col-span-3">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  type="button"
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="hover:bg-gray-200 dark:hover:bg-gray-600"
-                >
-                  <PlusIcon className="w-4 h-4" />
-                </Button>
-                <span className="min-w-8 text-center">{quantity}</span>
+          <form onSubmit={onSubmit} className="space-y-8">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium block">
+                  Name
+                </Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full h-11 rounded-xl border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 focus:ring-2 focus:ring-indigo-500 dark:focus:ring-purple-500 transition-all duration-200"
+                  placeholder="Enter item name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="quantity" className="text-sm font-medium block">
+                  Quantity
+                </Label>
+                <div className="flex items-center gap-4 h-11">
                   <Button
-                    disabled={quantity === 1}
                     variant="outline"
                     size="icon"
                     type="button"
                     onClick={() => setQuantity(quantity - 1)}
-                    className="hover:bg-gray-200 dark:hover:bg-gray-600"
+                    disabled={quantity === 1}
+                    className="h-full aspect-square rounded-xl border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                   >
-                  <MinusIcon className="w-4 h-4" />
-                </Button>
+                    <MinusIcon className="w-4 h-4" />
+                  </Button>
+                  <span className="min-w-12 text-center text-lg font-semibold">{quantity}</span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    type="button"
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="h-full aspect-square rounded-xl border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                  >
+                    <PlusIcon className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="checked" className="text-right">
-                Checked?
-              </Label>
-              <div className="col-span-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="checked" className="text-sm font-medium">
+                  Mark as completed
+                </Label>
                 <Switch
                   id="checked"
                   checked={checked}
                   onCheckedChange={(checked) => setChecked(checked as boolean)}
+                  className="data-[state=checked]:bg-indigo-600 dark:data-[state=checked]:bg-indigo-400"
                 />
               </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="destructive" onClick={() => setOpen(false)} type="button">
-              Cancel
-            </Button>
-            <Button type="submit">
-              Add
-            </Button>
+            <DialogFooter className="flex-col gap-3 sm:flex-row pt-4 border-t border-zinc-200 dark:border-zinc-700">
+              <Button 
+                variant="outline" 
+                onClick={() => setOpen(false)} 
+                type="button"
+                className="w-full sm:w-auto rounded-xl border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                className="w-full sm:w-auto rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                Add Item
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

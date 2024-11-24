@@ -3,13 +3,14 @@ import { LoginCredentials, AuthResponse } from "../types/auth.types";
 import { authApi } from "../api/auth";
 import { useAuthContext } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-
+import { useDB } from "@/contexts/DBContext";
 export const useAuth = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { setUser, setToken } = useAuthContext();
+    const { closeUserDB } = useDB();
     const navigate = useNavigate();
-    
+
     const login = async (params: LoginCredentials) => {
         const { rememberMe, ...creds } = params;
         setIsLoading(true);
@@ -35,8 +36,9 @@ export const useAuth = () => {
     };
 
     const logout = async () => {
+        await closeUserDB();
         setUser(null);
-        setToken(null);
+        setToken('', false);
         localStorage.removeItem('token');
         sessionStorage.removeItem('token');
         navigate('/login');
