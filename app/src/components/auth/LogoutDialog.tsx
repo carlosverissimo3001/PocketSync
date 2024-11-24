@@ -19,12 +19,11 @@ import { useToast } from "@/hooks/useToast";
 import { List } from "@/types/list.types";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { fetchListsWithItems } from "@/db/db-utils";
+import { useAuth } from "@/hooks/useAuth";
 
-interface LogoutDialogProps {
-  onLogout: () => Promise<void>;
-}
 
-export const LogoutDialog = ({ onLogout }: LogoutDialogProps) => {
+export const LogoutDialog = () => {
+  const { logout } = useAuth()
   const { user } = useAuthContext();
   const { lastSync } = useSync();
   const { mutate: syncLists, isPending: isSyncing } = useSyncLists();
@@ -66,7 +65,7 @@ export const LogoutDialog = ({ onLogout }: LogoutDialogProps) => {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await onLogout();
+      await logout();
     } catch (error) {
       toast({
         title: "Logout failed",

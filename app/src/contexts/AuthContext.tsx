@@ -62,16 +62,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     verifyAuth();
   }, []);
 
-  const handleSetToken = (newToken: string, rememberMe?: boolean) => {
+  const handleSetToken = (newToken: string) => {
     if (newToken) {
-      if (rememberMe) {
-        localStorage.setItem('token', newToken);
-      } else {
-        sessionStorage.setItem('token', newToken);
-      }
+      localStorage.setItem('token', newToken);
     } else {
       localStorage.removeItem('token');
-      sessionStorage.removeItem('token');
     }
     setToken(newToken);
   };

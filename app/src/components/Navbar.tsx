@@ -3,12 +3,10 @@ import { ListCheck, LogOut, MoonIcon, SunIcon } from 'lucide-react';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { CheckListDialog } from './list/dialogs/CheckListDialog';
 import { useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { LogoutDialog } from './auth/LogoutDialog';
 
 export const Navbar = () => {
-  const { logout } = useAuth()
   const { isAuthenticated } = useAuthContext();
   const { isDark, toggle } = useDarkMode();
   const location = useLocation();
@@ -43,7 +41,7 @@ export const Navbar = () => {
             
         <div className="ml-auto flex items-center gap-2">
           {isAuthenticated && (
-            <LogoutDialog onLogout={logout} />
+            <LogoutDialog />
           )}
           <Button variant="ghost" className="text-white hover:bg-gray-700" onClick={toggle}>
             {isDark ? <SunIcon /> : <MoonIcon />}

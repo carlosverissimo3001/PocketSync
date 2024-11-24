@@ -17,7 +17,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { passwordSchema } from "@/utils/password/password-schema"
 import { PasswordField } from "../ui/password-field"
-import { Checkbox } from "../ui/checkbox"
 import { Loader2 } from "lucide-react"
 
 
@@ -33,17 +32,16 @@ const formSchema = z.object({
 export function LoginForm() {
   const { login, isLoading } = useAuth();
 
-  // 1. Define form
+  // Defines the form with Zod validation
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "",
-      password: "",
-      rememberMe: false,
+      password: ""
     },
   })
 
-  // 2. Define submit handler
+  // Defines the submit handler (login hook)
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       await login(values);
@@ -70,7 +68,7 @@ export function LoginForm() {
         />
         <PasswordField />
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-start">
           <Button   
             type='submit'
             disabled={isLoading}
@@ -78,26 +76,6 @@ export function LoginForm() {
             {isLoading ? <Loader2 className="animate-spin" /> : 'Login'}
             {isLoading && <span className="ml-2">Please wait...</span>}
           </Button>
-          <FormField
-          control={form.control}
-          name="rememberMe"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  
-                />
-              </FormControl>
-              <div className="space-y-1 leading-none">
-                <FormLabel>
-                  Remember me
-                </FormLabel>
-              </div>
-              </FormItem>
-            )}
-          />
         </div>
     </form>
     </Form>
