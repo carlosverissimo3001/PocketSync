@@ -96,16 +96,15 @@ export const ListItem = ({ item, updateItem, allowChange }: ListItemProps) => {
               >
                 <PlusIcon className="w-3.5 h-3.5" />
               </Button>
-              {item.quantity !== 1 && (
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => updateItem("decrementQuantity", item.id)}
                   className="h-7 w-7"
+                  disabled={item.quantity === 1}
                 >
                   <MinusIcon className="w-3.5 h-3.5" />
-                </Button>
-              )}
+              </Button>
             </div>
           </>
         )}

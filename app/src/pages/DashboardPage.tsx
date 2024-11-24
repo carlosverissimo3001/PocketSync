@@ -134,12 +134,6 @@ export const DashboardPage = () => {
             description: "Your lists are being synced to the cloud 🌤️",
             duration: 2000,
           });
-
-          // This will happen in the next 30 seconds either way
-          // But this is ok
-          if (!isServerAlive) {
-            setIsServerAlive(true);
-          }
         },
         onError: () => {
           toast({
@@ -148,11 +142,6 @@ export const DashboardPage = () => {
             variant: "destructive",
             duration: 3000,
           });
-
-          // Same as above
-          if (isServerAlive) {
-            setIsServerAlive(false);
-          }
         }
       }
     );
