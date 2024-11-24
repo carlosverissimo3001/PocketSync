@@ -20,6 +20,6 @@ export const listService = {
   },
 
   updateList: async (list: List, userId: string): Promise<void> => {
-    await api.put(`/lists/update`, { lists: [list], userId });
+    await api.post(`/lists/update`, { lists: [list], userId });
   },
 };      

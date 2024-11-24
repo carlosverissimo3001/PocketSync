@@ -23,6 +23,7 @@ export class ListsController {
    */
   @Post('update')
   async updateList(@Body() body: SyncListsDto) {
+    // Note: The user id in the body might not be the owner
     return this.listsService.listHandler(body);
   }
 

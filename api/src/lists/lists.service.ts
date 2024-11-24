@@ -17,7 +17,10 @@ export class ListsService {
   async listHandler(data: SyncListsDto) {
     // Called when:
     // 1. A FE has sent a batch of lists to the server.
+    // 1.1 The owner of the lists is the user in the body.
     // 2. A user has edited a single list, through the single-list viewer.
+    // 2.1 The owner of the list is not the user in the body.
+    // !! BE CAREFUL !!
     const { userId, lists } = data;
 
     // All this handler will do is enqueue a job to resolve conflicts.
