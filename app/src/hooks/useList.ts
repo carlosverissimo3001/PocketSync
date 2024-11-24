@@ -11,13 +11,22 @@ export const useList = (id: string) => {
     });
 };
 
+export const useUpdateList = () => {
+    return useMutation({
+        mutationKey: ["updateList"],
+        mutationFn: ({ list, userId }: { list: List, userId: string }) => 
+            listService.updateList(list, userId),
+    });
+};
+
 export const useSyncLists = () => {
     const { updateLastSync } = useSync();
 
     return useMutation({
         mutationKey: ["syncLists"],
-        mutationFn: (lists: List[]) => listService.syncLists(lists),
-        onSuccess: async (_, lists) => {
+        mutationFn: ({ lists, userId }: { lists: List[], userId: string }) => 
+            listService.syncLists(lists, userId),
+        onSuccess: async (_, { lists }) => {
             await updateLastSync(lists.length);
         },
     });

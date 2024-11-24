@@ -1,5 +1,5 @@
+import { getCurrentDB } from '@/db/db';
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import db from '@/db/db';
 import { v4 as uuidv4 } from 'uuid';
 
 type SyncContextType = {
@@ -15,7 +15,7 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
 
   const updateLastSync = useCallback(async (listLength: number) => {
     const newSyncTime = new Date();
-    await db.serverSyncs.put({
+    await getCurrentDB().serverSyncs.put({
       id: uuidv4(),
       listLength,
       lastSync: newSyncTime
@@ -25,7 +25,7 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchLastSync = useCallback(async () => {
     try {
-      const lastSyncRecord = await db.serverSyncs.orderBy('lastSync').last();
+      const lastSyncRecord = await getCurrentDB().serverSyncs.orderBy('lastSync').last();
       setLastSync(lastSyncRecord?.lastSync ?? null);
     } catch (error) {
       console.log('No previous sync found');

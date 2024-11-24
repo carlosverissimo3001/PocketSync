@@ -35,14 +35,12 @@ interface ListCardProps {
   list: List;
   updateList: (list: List) => void;
   handleDelete: (list: List) => void;
-  isFromSingleView: boolean;
 }
 
 export const ListCard = ({
   list,
   updateList,
-  handleDelete,
-  isFromSingleView,
+  handleDelete
 }: ListCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(list.name);
@@ -123,11 +121,9 @@ export const ListCard = ({
                       className={`text-xl font-bold ${
                         allCompleted ? "line-through text-gray-500" : ""
                       } ${
-                        !isFromSingleView
-                          ? "cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
-                          : ""
+                        "cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
                       }`}
-                      onClick={() => !isFromSingleView && setIsEditing(true)}
+                      onClick={() => setIsEditing(true)}
                     >
                       {list.name}
                     </span>
@@ -151,10 +147,10 @@ export const ListCard = ({
                 <ListItem
                 key={item.id}
                 item={item}
-                updateItem={updateItem}
-                allowChange={!isFromSingleView}
-              />
-            ))}
+                  updateItem={updateItem}
+                  allowChange={true}
+                />
+              ))}
           </div>
         ) : (
           <p className="text-gray-500 dark:text-gray-400 text-center italic">
@@ -164,34 +160,30 @@ export const ListCard = ({
       </CardContent>
       <CardFooter className="flex justify-center">
         <div className="flex gap-2">
-          {!isFromSingleView && (
-            <>
-              <AddItemDialog submitHandler={createHandler} />
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive">Delete List</Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete the list
-                      "{list.name}" and all its items.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => handleDelete(list)}
-                      className="bg-destructive hover:bg-destructive/90 text-black dark:text-white"
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </>
-          )}
+          <AddItemDialog submitHandler={createHandler} />
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">Delete List</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the
+                  list "{list.name}" and all its items.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => handleDelete(list)}
+                  className="bg-destructive hover:bg-destructive/90 text-black dark:text-white"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </CardFooter>
     </Card>
