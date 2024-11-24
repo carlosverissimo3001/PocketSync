@@ -41,22 +41,26 @@ export const LogoutDialog = ({ onLogout }: LogoutDialogProps) => {
   }, []);
 
   const handleSync = async () => {
-    try {
-      await syncLists({ lists, userId: user?.id ?? "" });
-      toast({
-        title: "Sync Request Sent 📡",
-        description: "Your lists are being synced to the clouds 🌤️",
-        duration: 3000,
-      });
-    } catch (error) {
-      toast({
-        title: "Sync failed",
-        description: "Failed to sync your lists. Please try again.",
-        variant: "destructive",
-        duration: 3000,
-      });
-      console.error(error);
-    }
+    syncLists(
+        { lists, userId: user?.id ?? '' },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Sync request sent 📡",
+              description: "Your lists are being synced to the cloud 🌤️",
+              duration: 2000,
+            });
+          },
+          onError: () => {
+            toast({
+              title: "Sync failed 🚨",
+              description: "Looks like the clouds are not reachable right now 🌧️",
+              variant: "destructive",
+              duration: 3000,
+            });
+          }
+        }
+      );
   };
 
   const handleLogout = async () => {

@@ -22,6 +22,7 @@ interface SyncComponentProps {
   lastSync: Date | null;
   onFrequencyChange?: (minutes: number) => void;
   currentFrequency?: number; // in minutes
+  isServerAlive: boolean;
 }
 
 export const SyncComponent = ({ 
@@ -29,7 +30,8 @@ export const SyncComponent = ({
   isLoading, 
   lastSync,
   onFrequencyChange,
-  currentFrequency = 30 
+  currentFrequency = 30,
+  isServerAlive 
 }: SyncComponentProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -84,15 +86,39 @@ export const SyncComponent = ({
             </Tooltip>
           </TooltipProvider>
 
-          <div className="flex flex-col">
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-              Last synced with ☁️
-            </span>
-            <span className="text-sm text-gray-700 dark:text-gray-300 font-semibold">
-              {lastSync ? xTimeAgo(lastSync) : 'Never'}
-            </span>
+          {/* Status Information */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                Last synced with ☁️
+              </span>
+              <span className="text-sm text-gray-700 dark:text-gray-300 font-semibold">
+                {lastSync ? xTimeAgo(lastSync) : 'Never'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                Server Status
+              </span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div 
+                      className={`h-2 w-2 rounded-full ${
+                        isServerAlive 
+                          ? 'bg-green-500 animate-pulse' 
+                          : 'bg-red-500'
+                      }`}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{isServerAlive ? 'Server is online' : 'Server is offline'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
-          
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

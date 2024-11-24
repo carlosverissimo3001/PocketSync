@@ -30,6 +30,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
+import { Copy } from "lucide-react";
+import { useToast } from "@/hooks/useToast";
 
 interface ListCardProps {
   list: List;
@@ -42,6 +44,7 @@ export const ListCard = ({
   updateList,
   handleDelete
 }: ListCardProps) => {
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(list.name);
   const allCompleted =
@@ -98,6 +101,24 @@ export const ListCard = ({
     setIsEditing(false);
   };
 
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(list.id);
+      toast({
+        title: "List ID copied! 📋",
+        description: "Share this ID with others to collaborate",
+        duration: 2000,
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to copy 😕",
+        description: "Please try again",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
+
   return (
     <Card className="transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
       <CardHeader>
@@ -114,23 +135,36 @@ export const ListCard = ({
                 />
               </form>
             ) : (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      className={`text-xl font-bold ${
-                        allCompleted ? "line-through text-gray-500" : ""
-                      } ${
-                        "cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
-                      }`}
-                      onClick={() => setIsEditing(true)}
-                    >
-                      {list.name}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>Rename list</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <div className="flex items-center gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className={`text-xl font-bold ${
+                          allCompleted ? "line-through text-gray-500" : ""
+                        } ${
+                          "cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
+                        }`}
+                        onClick={() => setIsEditing(true)}
+                      >
+                        {list.name}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>Rename list</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Copy 
+                        className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" 
+                        onClick={handleShare}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>Share list</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             )}
           </div>
           <span className="text-sm text-gray-500 dark:text-gray-400">
