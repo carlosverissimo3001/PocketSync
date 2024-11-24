@@ -1,10 +1,10 @@
 // Jobs to handle conflicts between different versions of the same list.
-import { buildSampleList, List } from '@/entities/list.entity';
+import { List } from '@/entities/list.entity';
 import { PrismaService } from '@/prisma/prisma.service';
 import { ZmqService } from '@/zmq/zmq.service';
-import { Process, Processor } from '@nestjs/bull';
+import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Injectable } from '@nestjs/common';
-import { Job } from 'bull';
+import { Job, Queue } from 'bull';
 
 @Injectable()
 @Processor('crdt')
@@ -12,6 +12,7 @@ export class CrdtConsumer {
   constructor(
     private readonly zmqService: ZmqService,
     private readonly prisma: PrismaService,
+    @InjectQueue('crdt') private readonly crdtQueue: Queue,
   ) {}
 
   // Job called when:
@@ -19,6 +20,7 @@ export class CrdtConsumer {
   // 2. A user has edited a single list, through the single-list viewer.
   @Process('resolve-conflicts')
   async handleConflicts(job: Job<{ userId: string; lists: List[] }>) {
+    this.crdtQueue.empty();
     let userId = job.data.userId;
     const lists = job.data.lists;
 
@@ -37,10 +39,7 @@ export class CrdtConsumer {
     // For now, just simulate a delay
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    // And return a sample list to know that the publisher is working
-    await this.prisma.list.create({
-      data: buildSampleList(userId),
-    });
+    // And return the user's lists
     const resolvedLists = await this.prisma.list.findMany({
       where: { ownerId: userId },
       include: { items: true },

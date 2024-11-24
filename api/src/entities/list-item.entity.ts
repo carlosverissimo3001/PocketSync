@@ -15,7 +15,7 @@ export const buildSampleItem = (): Omit<
   'list'
 > => ({
   id: uuidv4(),
-  name: 'Sample item',
+  name: 'Item',
   quantity: 13,
   checked: false,
   createdAt: new Date('2023-11-16'),

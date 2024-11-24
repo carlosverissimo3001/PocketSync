@@ -24,9 +24,8 @@ export const DashboardPage = () => {
   const { initializeUserDB } = useDB();
   const [lists, setLists] = useState<List[]>([]);
   const { mutate: syncLists, isPending } = useSyncLists();
-  const [syncFrequency, setSyncFrequency] = useState(5); // default 5 minutes
   const { toast } = useToast();
-  const { lastSync, fetchLastSync } = useSync();
+  const { lastSync, fetchLastSync, syncFrequency, setSyncFrequency } = useSync();
   const [isServerAlive, setIsServerAlive] = useState<boolean>(false);
 
   // Initialize DB when user is available
@@ -59,6 +58,10 @@ export const DashboardPage = () => {
   // Hook to sync lists with server based on frequency
   // Is updated when frequency or lists change
   useEffect(() => {
+    if (syncFrequency === 0) {
+      return;
+    }
+
     const interval = setInterval(() => {
       syncLists({ lists, userId: user?.id ?? '' });
     }, syncFrequency * 60000); // To milliseconds

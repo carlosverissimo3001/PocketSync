@@ -76,7 +76,26 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
 
   // Send to the server
   const onSaveChanges = () => {
-    updateList({ list, userId: user?.id ?? "" });
+    updateList(
+      { list, userId: user?.id ?? "" },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Your changes have been saved 🎉",
+            description: "The server will process them shortly",
+            duration: 2000,
+          });
+        },
+        onError: () => {
+          toast({
+            title: "Failed to save changes 😕",
+            description: "Please try again",
+            variant: "destructive",
+            duration: 2000,
+          });
+        },
+      }
+    );
   };
 
   return (

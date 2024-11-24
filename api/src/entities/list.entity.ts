@@ -12,7 +12,7 @@ export class List {
 
 export const buildSampleList = (userId: string): Prisma.ListCreateInput => ({
   id: uuidv4(),
-  name: 'Sample list, created with ❤️ by the server',
+  name: 'Created with ❤️ by the server',
   owner: { connect: { id: userId } },
   items: { create: [buildSampleItem()] },
   createdAt: new Date('2023-11-16'), // Don't ask me why I chose this date.
