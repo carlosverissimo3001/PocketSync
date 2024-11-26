@@ -4,19 +4,23 @@ import { getCurrentDB } from "./db";
 export const fetchListsWithItems = async () => {
   try {
     const db = getCurrentDB();
-    const lists = await db.lists.toArray();
+    const lists = await db.lists.filter(list => !list.deleted).toArray();
     const listsWithItems = await Promise.all(
-      lists.map(async (list) => {
-        const items = await db.items.where("listId").equals(list.id).toArray();
-        return { ...list, items };
-      })
+      lists.map(async (list) => ({
+        ...list,
+        items: await db.items
+          .where("listId")
+          .equals(list.id)
+          .filter(item => !item.deleted)
+          .toArray()
+      }))
     );
     return listsWithItems;
   } catch (error) {
     if (error instanceof Error && error.message.includes('not initialized')) {
-      return [];  // Return empty array if DB isn't ready yet
+      return [];
     }
-    throw error;  // Re-throw other errors
+    throw error;
   }
 };
 
@@ -44,8 +48,15 @@ export const updateList = async (list: List) => {
 export const deleteList = async (listId: string) => {
   const db = getCurrentDB();
   await db.transaction("rw", db.lists, db.items, async () => {
-    await db.items.where("listId").equals(listId).delete();
-    await db.lists.delete(listId);
+    await db.items
+      .where("listId")
+      .equals(listId)
+      .modify({ deleted: true, deletedAt: new Date() });
+    
+    await db.lists
+      .where('id')
+      .equals(listId)
+      .modify({ deleted: true, deletedAt: new Date() });
   });
 };
 

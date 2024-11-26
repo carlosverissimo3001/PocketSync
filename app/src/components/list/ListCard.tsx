@@ -76,7 +76,7 @@ export const ListCard = ({
           case "toggleUnchecked":
             return { ...item, checked: false };
           case "delete":
-            return null;
+            return { ...item, deleted: true, deletedAt: new Date() };
           case "incrementQuantity":
             return { ...item, quantity: item.quantity + 1 };
           case "decrementQuantity":

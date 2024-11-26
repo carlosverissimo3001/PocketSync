@@ -15,8 +15,8 @@ export class ShoppingListDB extends Dexie {
   constructor(userId: string) {
     super(`ShoppingListDB_${userId}`);
     this.version(1).stores({
-      lists: "id, name, ownerId, createdAt, updatedAt",
-      items: "id, listId, name, quantity, checked, createdAt, updatedAt",
+      lists: "id, name, ownerId, createdAt, updatedAt, deleted, deletedAt",
+      items: "id, listId, name, quantity, checked, createdAt, updatedAt, deleted, deletedAt",
       serverSyncs: "id, lastSync, listLength",
     });
   }

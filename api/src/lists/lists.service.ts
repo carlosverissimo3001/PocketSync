@@ -39,7 +39,7 @@ export class ListsService {
 
   async getList(id: string) {
     const list = await this.prisma.list.findUnique({
-      where: { id },
+      where: { id, deleted: false },
       include: {
         items: true,
       },

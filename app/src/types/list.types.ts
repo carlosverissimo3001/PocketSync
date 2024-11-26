@@ -7,6 +7,8 @@ export interface List {
     ownerId: string;
     items: ListItem[];
     updatedAt?: Date;
+    deleted?: boolean;
+    deletedAt?: Date;
 }
 
 export interface ListExtended extends List {
@@ -21,4 +23,6 @@ export interface ListItem {
     listId: string;
     createdAt?: Date;
     updatedAt?: Date;
+    deleted?: boolean;
+    deletedAt?: Date;
 }

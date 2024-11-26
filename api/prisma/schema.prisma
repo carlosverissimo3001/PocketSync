@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["omitApi"]
 }
 
@@ -30,6 +30,8 @@ model List {
   owner     User       @relation(fields: [ownerId], references: [id])
   updatedAt DateTime   @map("updated_at")
   items     ListItem[]
+  deleted   Boolean    @default(false)
+  deletedAt DateTime?  @map("deleted_at")
 }
 
 model ListItem {
@@ -41,4 +43,6 @@ model ListItem {
   listId    String   @map("list_id")
   list      List     @relation(fields: [listId], references: [id])
   createdAt DateTime @default(now()) @map("created_at")
+  deleted   Boolean  @default(false)
+  deletedAt DateTime? @map("deleted_at")
 }
