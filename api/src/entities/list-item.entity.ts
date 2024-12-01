@@ -8,6 +8,8 @@ export class ListItem {
   createdAt: Date;
   updatedAt: Date;
   listId: string;
+  deleted: boolean;
+  deletedAt?: Date;
 }
 
 export const buildSampleItem = (): Omit<
@@ -15,9 +17,10 @@ export const buildSampleItem = (): Omit<
   'list'
 > => ({
   id: uuidv4(),
-  name: 'Sample item',
+  name: 'Item',
   quantity: 13,
   checked: false,
   createdAt: new Date('2023-11-16'),
   updatedAt: new Date('2023-11-16'),
+  deleted: false,
 });

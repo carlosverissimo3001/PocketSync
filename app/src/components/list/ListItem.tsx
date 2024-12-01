@@ -4,6 +4,7 @@ import { Checkbox } from "../ui/checkbox";
 import { ListItem as ListItemType } from "@/types/list.types";
 import { useState } from "react";
 import { Input } from "../ui/input";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 
 type ListItemProps = {
   item: ListItemType;
@@ -28,7 +29,7 @@ export const ListItem = ({ item, updateItem, allowChange }: ListItemProps) => {
   return (
     <div className="flex items-center justify-between py-1.5 px-3 rounded-md bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors mb-1">
       <div className="flex items-center gap-2 min-w-0 flex-1">
-        {allowChange && ( 
+        {allowChange && (
           <Checkbox
             id={item.id}
             checked={item.checked}
@@ -62,9 +63,23 @@ export const ListItem = ({ item, updateItem, allowChange }: ListItemProps) => {
               />
             </form>
           ) : (
-            <span className={`text-sm font-medium text-gray-800 dark:text-gray-200 truncate ${item.checked ? "line-through" : ""}`}>
-              {item.name}
-            </span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    className={`text-sm font-medium text-gray-800 dark:text-gray-200 truncate ${
+                      item.checked ? "line-through" : ""
+                    } ${allowChange ? "cursor-pointer hover:text-gray-700 dark:hover:text-gray-300" : ""}`}
+                    onClick={() => allowChange && setIsEditing(true)}
+                  >
+                    {item.name}
+                  </span>
+                </TooltipTrigger>
+                {allowChange && (
+                  <TooltipContent>Rename item</TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           )}
         </div>
       </div>
@@ -81,27 +96,26 @@ export const ListItem = ({ item, updateItem, allowChange }: ListItemProps) => {
               >
                 <PlusIcon className="w-3.5 h-3.5" />
               </Button>
-              {item.quantity !== 1 && (
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => updateItem("decrementQuantity", item.id)}
                   className="h-7 w-7"
+                  disabled={item.quantity === 1}
                 >
                   <MinusIcon className="w-3.5 h-3.5" />
-                </Button>
-              )}
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => updateItem("delete", item.id)}
-              className="h-7 w-7 ml-1"
-            >
-              <TrashIcon className="w-3.5 h-3.5" />
-            </Button>
           </>
         )}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => updateItem("delete", item.id)}
+          className="h-7 w-7 ml-1"
+        >
+          <TrashIcon className="w-3.5 h-3.5" />
+        </Button>
       </div>
     </div>
   );

@@ -19,12 +19,10 @@ import { useToast } from "@/hooks/useToast";
 import { List } from "@/types/list.types";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { fetchListsWithItems } from "@/db/db-utils";
+import { useAuth } from "@/hooks/useAuth";
 
-interface LogoutDialogProps {
-  onLogout: () => Promise<void>;
-}
-
-export const LogoutDialog = ({ onLogout }: LogoutDialogProps) => {
+export const LogoutDialog = () => {
+  const { logout } = useAuth()
   const { user } = useAuthContext();
   const { lastSync } = useSync();
   const { mutate: syncLists, isPending: isSyncing } = useSyncLists();
@@ -41,28 +39,32 @@ export const LogoutDialog = ({ onLogout }: LogoutDialogProps) => {
   }, []);
 
   const handleSync = async () => {
-    try {
-      await syncLists({ lists, userId: user?.id ?? "" });
-      toast({
-        title: "Sync Request Sent 📡",
-        description: "Your lists are being synced to the clouds 🌤️",
-        duration: 3000,
-      });
-    } catch (error) {
-      toast({
-        title: "Sync failed",
-        description: "Failed to sync your lists. Please try again.",
-        variant: "destructive",
-        duration: 3000,
-      });
-      console.error(error);
-    }
+    syncLists(
+        { lists, userId: user?.id ?? '' },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Sync request sent 📡",
+              description: "Your lists are being synced to the cloud 🌤️",
+              duration: 2000,
+            });
+          },
+          onError: () => {
+            toast({
+              title: "Sync failed 🚨",
+              description: "Looks like the clouds are not reachable right now 🌧️",
+              variant: "destructive",
+              duration: 3000,
+            });
+          }
+        }
+      );
   };
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await onLogout();
+      await logout();
     } catch (error) {
       toast({
         title: "Logout failed",

@@ -16,14 +16,24 @@ import { useToast } from "@/hooks/useToast";
 import { ToastAction } from "@/components/ui/toast";
 import useSubscriber from "@/hooks/useSubscriber";
 import { useSync } from "@/contexts/SyncContext";
+import { useDB } from "@/contexts/DBContext";
+import { Button } from "@/components/ui/button";
 
 export const DashboardPage = () => {
   const { user } = useAuthContext();
+  const { initializeUserDB } = useDB();
   const [lists, setLists] = useState<List[]>([]);
   const { mutate: syncLists, isPending } = useSyncLists();
-  const [syncFrequency, setSyncFrequency] = useState(5); // default 5 minutes
   const { toast } = useToast();
-  const { lastSync, fetchLastSync } = useSync();
+  const { lastSync, fetchLastSync, syncFrequency, setSyncFrequency } = useSync();
+  const [isServerAlive, setIsServerAlive] = useState<boolean>(false);
+
+  // Initialize DB when user is available
+  useEffect(() => {
+    if (user?.id) {
+      initializeUserDB(user.id);
+    }
+  }, [user?.id, initializeUserDB]);
 
   // Hook to fetch last sync time
   useEffect(() => {
@@ -48,17 +58,39 @@ export const DashboardPage = () => {
   // Hook to sync lists with server based on frequency
   // Is updated when frequency or lists change
   useEffect(() => {
-    // No frequency or lists, no need to sync
-    if (!syncFrequency || !lists || lists.length === 0) return;
+    if (syncFrequency === 0) {
+      return;
+    }
 
     const interval = setInterval(() => {
-      syncLists(lists);
+      syncLists({ lists, userId: user?.id ?? '' });
     }, syncFrequency * 60000); // To milliseconds
 
     return () => {
       clearInterval(interval);
     };
-  }, [syncFrequency, lists, syncLists]);
+  }, [syncFrequency, lists, syncLists, user?.id]);
+
+  // Check server health
+  useEffect(() => {
+    const checkServerHealth = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/`);
+        setIsServerAlive(response.ok);
+      } catch (error) {
+        setIsServerAlive(false);
+        console.error(error);
+      }
+    };
+
+    // Initial check
+    checkServerHealth();
+
+    // Set up interval
+    const interval = setInterval(checkServerHealth, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   const createListHandler = async (listName: string) => {
     const newList: List = {
@@ -95,24 +127,38 @@ export const DashboardPage = () => {
     await deleteList(list.id);
   };
 
-  const handleSync = async () => {
-    if (!lists || lists.length === 0) return;
-    
-    try {
-      syncLists(lists);
-      toast({
-        title: "Sync request sent",
-        description: "Your lists will be synchronized soon",
-        duration: 2000,
-      });
-    } catch (error) {
-      toast({
-        title: "Sync failed",
-        description: "Failed to synchronize your lists. Please try again.",
-        variant: "destructive",
-        duration: 3000,
-      });
-    }
+  const handleSync = async () => {    
+    syncLists(
+      { lists, userId: user?.id ?? '' },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Sync request sent 📡",
+            description: "Your lists are being synced to the cloud 🌤️",
+            duration: 2000,
+          });
+
+          // This will happen in the next 30 seconds either way
+          // But this is ok
+          if (!isServerAlive) {
+            setIsServerAlive(true);
+          }
+        },
+        onError: () => {
+          toast({
+            title: "Sync failed 🚨",
+            description: "Looks like the clouds are not reachable right now 🌧️",
+            variant: "destructive",
+            duration: 3000,
+          });
+
+          // Same as above
+          if (isServerAlive) {
+            setIsServerAlive(false);
+          }
+        }
+      }
+    );
   };
 
   const handleFrequencyChange = (minutes: number) => {
@@ -147,7 +193,6 @@ export const DashboardPage = () => {
                     list={list}
                     updateList={updateListHandler}
                     handleDelete={deleteListHandler}
-                    isFromSingleView={false}
                   />
                 </div>
               ))}
@@ -176,8 +221,26 @@ export const DashboardPage = () => {
                 No lists yet
               </h3>
               <p className="mt-2 text-gray-500 dark:text-gray-400">
-                Get started by creating your first list using the button above
+                Click the "Create new list" card above to get started! ☝️
               </p>
+              
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-600/30"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="text-gray-400 px-4 font-medium">or</span>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-center gap-4">
+                <Button
+                  onClick={handleSync}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  Sync with Cloud ☁️
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -188,6 +251,7 @@ export const DashboardPage = () => {
           lastSync={lastSync}
           currentFrequency={syncFrequency}
           onFrequencyChange={handleFrequencyChange}
+          isServerAlive={isServerAlive}
         />
       </div>
     </div>
