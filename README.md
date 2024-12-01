@@ -34,9 +34,9 @@ cd api
 npm install -g yarn
 ```
 
-3. Ensure `prisma/.env` is set up correctly
+1. Ensure `.env` is set up correctly
    > should have `DATABASE_URL` set
-4. Install dependencies
+2. Install dependencies
 
 ```sh
 yarn
