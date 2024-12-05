@@ -1,52 +1,71 @@
-// Jobs to handle conflicts between different versions of the same list.
 import { List } from '@/entities/list.entity';
 import { PrismaService } from '@/prisma/prisma.service';
 import { ZmqService } from '@/zmq/zmq.service';
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Injectable } from '@nestjs/common';
 import { Job, Queue } from 'bull';
+import { CRDTModule } from './crdt.module';
 
 @Injectable()
 @Processor('crdt')
 export class CrdtConsumer {
+  private crdtModule: CRDTModule;
+
   constructor(
     private readonly zmqService: ZmqService,
     private readonly prisma: PrismaService,
     @InjectQueue('crdt') private readonly crdtQueue: Queue,
-  ) {}
+  ) {
+    this.crdtModule = new CRDTModule();
+  }
 
-  // Job called when:
-  // 1. A FE has sent a batch of lists to the server.
-  // 2. A user has edited a single list, through the single-list viewer.
   @Process('resolve-conflicts')
   async handleConflicts(job: Job<{ userId: string; lists: List[] }>) {
-    this.crdtQueue.empty();
-    let userId = job.data.userId;
-    const lists = job.data.lists;
+    const userId = job.data.userId; // Último user que editou a lista
+    const incomingLists = job.data.lists;
 
-    // At this point, if we were not sent lists, then one of two things happened:
-    // 1. This was a FE that requested all lists for a user.
-    // 2. This was a FE that deleted all lists for a user, and then synced.
-    if (lists.length === 0) {
-      // TODO: Should this be a separate flow? Or can we handle it
-      // just like other changes below?
-    } else if (userId !== lists[0].ownerId) {
-      // This means that another user Y has edited user's X list
-      // The real "owner" of the list is X, and Y is just a viewer.
-      userId = lists[0].ownerId;
+    if (incomingLists.length === 0) {
+      await this.handleEmptySync(userId);
+      return;
     }
 
-    // For now, just simulate a delay
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    // And return the user's lists
-    const resolvedLists = await this.prisma.list.findMany({
-      where: { ownerId: userId },
-      include: { items: true },
+    // Obtém o estado atual da DB
+    const existingLists = await this.prisma.list.findMany({
+      where: { ownerId: incomingLists[0].ownerId },
+      include: { items: true, lastEditor: true }, 
     });
 
-    // This should be the exit point of the function.
-    // Will publish the resolved lists to all this user's FEs
-    await this.zmqService.publishUserLists(userId, resolvedLists);
+    // Mistura as listas recebidas com o estado local usando o CRDTModule
+    const mergedLists = this.crdtModule.mergeLists(
+      incomingLists.map((list) => ({
+        id: list.id,
+        value: {
+          ...list,
+          lastEditorId: userId, // Define o último editor com o `userId`
+        },
+        updatedAt: list.updatedAt,
+      })),
+    );
+
+    // Atualiza a DB com as listas misturadas
+    for (const list of mergedLists) {
+      await this.prisma.list.upsert({
+        where: { id: list.id },
+        create: { ...list.value, ownerId: list.value.ownerId, lastEditorId: userId },
+        update: { ...list.value, lastEditorId: userId },
+      });
+    }
+
+    // Publica as listas resolvidas para sincronização
+    await this.zmqService.publishUserLists(
+      incomingLists[0].ownerId, // Publica para o `ownerId`
+      mergedLists.map((entry) => entry.value),
+    );
+  }
+
+  private async handleEmptySync(userId: string): Promise<void> {
+    // Lida com o caso de sincronização quando a lista está vazia
+    await this.prisma.list.deleteMany({ where: { ownerId: userId } });
+    await this.zmqService.publishUserLists(userId, []);
   }
 }

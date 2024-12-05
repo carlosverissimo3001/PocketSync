@@ -20,6 +20,7 @@ model User {
   password  String
   createdAt DateTime @default(now()) @map("created_at")
   lists     List[]
+  editedLists List[] @relation("LastEditor")
 }
 
 model List {
@@ -32,6 +33,8 @@ model List {
   items     ListItem[]
   deleted   Boolean    @default(false)
   deletedAt DateTime?  @map("deleted_at")
+  lastEditorId  String?    @map("last_editor_id")
+  lastEditor    User?      @relation("LastEditor", fields: [lastEditorId], references: [id])
 }
 
 model ListItem {
