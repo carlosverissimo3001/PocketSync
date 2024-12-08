@@ -1,71 +1,83 @@
-import { List } from '@/entities/list.entity';
 import { PrismaService } from '@/prisma/prisma.service';
 import { ZmqService } from '@/zmq/zmq.service';
-import { InjectQueue, Process, Processor } from '@nestjs/bull';
+import { Process, Processor } from '@nestjs/bull';
 import { Injectable } from '@nestjs/common';
-import { Job, Queue } from 'bull';
-import { CRDTModule } from './crdt.module';
+import { Job } from 'bull';
+import { ProcessBufferDto } from '@/dtos/process-buffer.dto';
+import { CRDTService } from './crdt.service';
+import { User } from '@prisma/client';
+import { List } from '@/entities';
 
 @Injectable()
 @Processor('crdt')
-export class CrdtConsumer {
-  private crdtModule: CRDTModule;
-
+export class CRDTConsumer {
   constructor(
     private readonly zmqService: ZmqService,
     private readonly prisma: PrismaService,
-    @InjectQueue('crdt') private readonly crdtQueue: Queue,
-  ) {
-    this.crdtModule = new CRDTModule();
-  }
+    private readonly crdtService: CRDTService,
+  ) {}
 
-  @Process('resolve-conflicts')
-  async handleConflicts(job: Job<{ userId: string; lists: List[] }>) {
-    const userId = job.data.userId; // Último user que editou a lista
-    const incomingLists = job.data.lists;
+  @Process('process-buffer')
+  async handleProcessBuffer(job: Job<ProcessBufferDto>) {
+    try {
+      const { isEmptySync, userId, requesterId } = job.data;
 
-    if (incomingLists.length === 0) {
-      await this.handleEmptySync(userId);
-      return;
-    }
+      if (isEmptySync) {
+        await this.handleEmptySync(userId);
+        return;
+      }
 
-    // Obtém o estado atual da DB
-    const existingLists = await this.prisma.list.findMany({
-      where: { ownerId: incomingLists[0].ownerId },
-      include: { items: true, lastEditor: true }, 
-    });
-
-    // Mistura as listas recebidas com o estado local usando o CRDTModule
-    const mergedLists = this.crdtModule.mergeLists(
-      incomingLists.map((list) => ({
-        id: list.id,
-        value: {
-          ...list,
-          lastEditorId: userId, // Define o último editor com o `userId`
-        },
-        updatedAt: list.updatedAt,
-      })),
-    );
-
-    // Atualiza a DB com as listas misturadas
-    for (const list of mergedLists) {
-      await this.prisma.list.upsert({
-        where: { id: list.id },
-        create: { ...list.value, ownerId: list.value.ownerId, lastEditorId: userId },
-        update: { ...list.value, lastEditorId: userId },
+      // Fetch unresolved changes for the user
+      const bufferedChanges = await this.prisma.bufferedChange.findMany({
+        where: { userId, resolved: false },
+        orderBy: { timestamp: 'asc' }, // Optional, for deterministic processing
       });
-    }
 
-    // Publica as listas resolvidas para sincronização
-    await this.zmqService.publishUserLists(
-      incomingLists[0].ownerId, // Publica para o `ownerId`
-      mergedLists.map((entry) => entry.value),
-    );
+      // Group these changes by list ID for batch processing
+      const changesByList = bufferedChanges.reduce(
+        (acc, change) => {
+          acc[change.listId] = acc[change.listId] || [];
+          acc[change.listId].push(change);
+          return acc;
+        },
+        {} as Record<string, typeof bufferedChanges>,
+      );
+
+      const resolvedLists = [];
+
+      // For each list, resolve the changes
+      for (const listId in changesByList) {
+        const resolvedList = await this.crdtService.resolveChanges(
+          changesByList[listId],
+          listId,
+          requesterId,
+        );
+        resolvedLists.push(resolvedList);
+      }
+
+      // Mark the changes as resolved
+      await this.prisma.bufferedChange.updateMany({
+        where: { id: { in: bufferedChanges.map((change) => change.id) } },
+        data: { resolved: true },
+      });
+
+      // Publish the resolved lists to all the client's subscribers
+      await this.zmqService.publishUserLists(userId, resolvedLists);
+    } catch (error) {
+      console.error('Error processing buffer:', error);
+      throw error; // Rethrow to let Bull handle the retry
+    }
   }
 
+  /**
+   * If the client sends to lists, it means that it wants to fetch the lists from the server.
+   * @param userId - The ID of the user
+   */
   private async handleEmptySync(userId: string): Promise<void> {
-    // Lida com o caso de sincronização quando a lista está vazia
-    await this.prisma.list.deleteMany({ where: { ownerId: userId } });
-    await this.zmqService.publishUserLists(userId, []);
+    const lists = await this.prisma.list.findMany({
+      where: { ownerId: userId },
+      include: { items: true },
+    });
+    await this.zmqService.publishUserLists(userId, lists);
   }
 }
