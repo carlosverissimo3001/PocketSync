@@ -12,8 +12,8 @@ export class ListsController {
    * @returns - Nothing.
    */
   @Post()
-  async listHandler(@Body() body: SyncListsDto) {
-    return this.listsService.listHandler(body);
+  async enqueueListChanges(@Body() body: SyncListsDto) {
+    return this.listsService.enqueueListChanges(body);
   }
 
   /**
@@ -24,7 +24,7 @@ export class ListsController {
   @Post('update')
   async updateList(@Body() body: SyncListsDto) {
     // Note: The user id in the body might not be the owner
-    return this.listsService.listHandler(body);
+    return this.listsService.enqueueListChanges(body);
   }
 
   /**
