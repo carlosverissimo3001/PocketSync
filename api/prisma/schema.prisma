@@ -21,6 +21,7 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   lists     List[]
   editedLists List[] @relation("LastEditor")
+  bufferedChanges BufferedChange[]
 }
 
 model List {
@@ -35,6 +36,7 @@ model List {
   deletedAt DateTime?  @map("deleted_at")
   lastEditorId  String?    @map("last_editor_id")
   lastEditor    User?      @relation("LastEditor", fields: [lastEditorId], references: [id])
+  bufferedChanges BufferedChange[]
 }
 
 model ListItem {
@@ -48,4 +50,21 @@ model ListItem {
   createdAt DateTime @default(now()) @map("created_at")
   deleted   Boolean  @default(false)
   deletedAt DateTime? @map("deleted_at")
+}
+
+model BufferedChange {
+  id          String   @id @default(uuid())
+  userId      String   // User who made the change
+  listId      String?  // The list affected (nullable for batch changes)
+  changes     Json     // Metadata of the changes as JSON
+  timestamp   DateTime @default(now())
+  resolved    Boolean  @default(false) // Whether the change has been processed
+  isProcessing Boolean  @default(false) // Whether the change is currently being processed
+
+  // Relationships
+  user        User     @relation(fields: [userId], references: [id])
+  list        List?    @relation(fields: [listId], references: [id])
+
+  @@index([userId])
+  @@index([listId])
 }
