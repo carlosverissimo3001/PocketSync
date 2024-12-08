@@ -1,62 +1,78 @@
-import { useEffect } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { io, Socket } from "socket.io-client";
-import { getCurrentDB } from "@/db/db";
 import { v4 as uuidv4 } from "uuid";
 import { useToast } from "@/hooks/useToast";
 import { useSync } from "@/contexts/SyncContext";
+import { List } from "@/types/list.types";
+import { useDB } from "@/contexts/DBContext";
+import { createList } from "@/db/db-utils";
+import { SYNC_SUCCESS, TOAST_MESSAGES } from "@/utils/toast-messages";
 
 const useSubscriber = (userId: string) => {
   const { toast } = useToast();
   const { updateLastSync } = useSync();
+  const socketRef = useRef<Socket>();
+  const { db } = useDB();
+
+  const handleListUpdate = useCallback(async (receivedLists: List[]) => {
+    try {
+      if (!db) {
+        console.log('Database not yet initialized, skipping update');
+        return;
+      }
+
+      if(receivedLists.length !== 0) {
+        await db.transaction('rw', [db.lists, db.items, db.serverSyncs], async () => {
+          // TODO: Find a way to make this more efficient
+        await db.lists.clear();
+        
+        for (const list of receivedLists) {
+          await createList(list);
+
+          if (list.items?.length) {
+            await Promise.all(
+              list.items.map(item => db.items.put(item))
+            );
+          }
+        }
+        
+        await db.serverSyncs.put({
+          id: uuidv4(),
+          listLength: receivedLists.length,
+          lastSync: new Date(),
+        });
+        });
+
+        updateLastSync(receivedLists.length);
+      }
+      
+      toast(SYNC_SUCCESS(receivedLists.length));
+    } catch (err) {
+      console.error('Database operation failed:', err);
+      toast(TOAST_MESSAGES.SYNC_ERROR);
+    }
+  }, [toast, updateLastSync, db]);
 
   useEffect(() => {
-    let socket: Socket;
+    if (!db || !userId) return;
 
     const startSubscriber = async () => {
-      // Starts a socket connection to the server
       try {
-        socket = io(import.meta.env.VITE_SOCKET_IO_URL, {
+        socketRef.current = io(import.meta.env.VITE_SOCKET_IO_URL, {
           query: { userId },
-          auth: { userId }, // double layer of security
+          auth: { userId },
           transports: ["websocket"],
         });
 
-        // Initializes the connection to the server
+        const socket = socketRef.current;
+        
         socket.on("connect", () => {
           console.log(`Connected to Socket.IO server for user: ${userId}`);
-
-          // Joins the user to a specific room
           socket.emit("joinRoom", userId);
         });
 
-        // Listen for list updates
-        socket.on("listUpdate", async (receivedLists) => {
-          console.log("Received updated lists:", receivedLists);
-
-          // Saves the updated lists to the local database
-          await getCurrentDB().lists.bulkPut(receivedLists);
-
-          // Saves the sync time to the local database
-          const syncTime = new Date();
-          await getCurrentDB().serverSyncs.put({
-            id: uuidv4(),
-            listLength: receivedLists.length,
-            lastSync: syncTime,
-          });
-
-          // Update sync time in context
-          updateLastSync(receivedLists.length);
-
-          // Displays a pretty toast notification
-          toast({
-            title: "✨ Lists Updated",
-            description: `${receivedLists.length} ${receivedLists.length === 1 ? 'list' : 'lists'} synchronized from the cloud ☁️`,
-            duration: 3000,
-            variant: "default",
-            className: "bg-green-500 text-white dark:bg-green-600 dark:text-white",
-          });
-        });
-
+        socket.on("listUpdate", handleListUpdate);
+        
         socket.on("disconnect", () => {
           console.log("Disconnected from Socket.IO server");
         });
@@ -78,12 +94,14 @@ const useSubscriber = (userId: string) => {
     startSubscriber();
 
     return () => {
-      socket.close(); // Clean up the subscription when the component is unmounted
-      console.log("Subscriber closed");
+      if (socketRef.current) {
+        socketRef.current.close();
+        console.log("Subscriber closed");
+      }
     };
-  }, [userId, toast, updateLastSync]);
+  }, [userId, handleListUpdate, toast, db]);
 
-  return null; // No need to return anything from this hook
+  return null;
 };
 
 export default useSubscriber;
