@@ -58,8 +58,8 @@ export const AddItemDialog = ({ submitHandler }: AddItemDialogProps) => {
       <DialogPortal>
         <DialogContent className="fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-900 dark:to-zinc-800 p-8 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-[0_0_50px_rgba(0,0,0,0.15)] dark:shadow-[0_0_50px_rgba(0,0,0,0.5)] w-[90vw] max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader className="space-y-3 mb-8">
-            <DialogTitle>
-              <h2 className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">Add Item</h2>
+            <DialogTitle className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+              Add Item
             </DialogTitle>
             <DialogDescription className="text-sm text-zinc-600 dark:text-zinc-300">
               Create a new item for your list.
