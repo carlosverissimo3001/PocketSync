@@ -2,23 +2,19 @@ import { List } from "@/types/list.types";
 import { getCurrentDB } from "./db";
 
 export const fetchListsWithItems = async () => {
-  try {
-    const db = getCurrentDB();
-    const lists = await db.lists.filter(list => !list.deleted).toArray();
-    const listsWithItems = await Promise.all(
-      lists.map(async (list) => ({
-        ...list,
-        items: await db.items
-          .where("listId")
-          .equals(list.id)
-          .filter(item => !item.deleted)
-          .toArray()
-      }))
-    );
-    return listsWithItems;
-  } catch (error) {
-    throw error;
-  }
+  const db = getCurrentDB();
+  const lists = await db.lists.filter(list => !list.deleted).toArray();
+  const listsWithItems = await Promise.all(
+    lists.map(async (list) => ({
+      ...list,
+      items: await db.items
+        .where("listId")
+        .equals(list.id)
+        .filter(item => !item.deleted)
+        .toArray()
+    }))
+  );
+  return listsWithItems;
 };
 
 export const createList = async (list: List) => {
