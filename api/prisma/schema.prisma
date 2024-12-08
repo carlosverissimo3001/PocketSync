@@ -15,55 +15,57 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  password  String
-  createdAt DateTime @default(now()) @map("created_at")
-  lists     List[]
-  editedLists List[] @relation("LastEditor")
+  id              String           @id @default(uuid())
+  username        String           @unique
+  password        String
+  createdAt       DateTime         @default(now()) @map("created_at")
+  lists           List[]
+  editedLists     List[]           @relation("LastEditor")
+  editedItems     ListItem[]       @relation("LastEditor")
   bufferedChanges BufferedChange[]
 }
 
 model List {
-  id        String     @id @default(uuid())
-  name      String     @map("name")
-  createdAt DateTime   @default(now()) @map("created_at")
-  ownerId   String     @map("owner_id")
-  owner     User       @relation(fields: [ownerId], references: [id])
-  updatedAt DateTime   @map("updated_at")
-  items     ListItem[]
-  deleted   Boolean    @default(false)
-  deletedAt DateTime?  @map("deleted_at")
-  lastEditorId  String?    @map("last_editor_id")
-  lastEditor    User?      @relation("LastEditor", fields: [lastEditorId], references: [id])
+  id              String           @id @default(uuid())
+  name            String           @map("name")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  ownerId         String           @map("owner_id")
+  owner           User             @relation(fields: [ownerId], references: [id])
+  updatedAt       DateTime         @map("updated_at")
+  items           ListItem[]
+  deleted         Boolean          @default(false)
+  lastEditorId    String?          @map("last_editor_id")
+  lastEditor      User?            @relation("LastEditor", fields: [lastEditorId], references: [id])
   bufferedChanges BufferedChange[]
 }
 
 model ListItem {
-  id        String   @id @default(uuid())
-  name      String
-  quantity  Int
-  checked   Boolean  @default(false)
-  updatedAt DateTime @map("updated_at")
-  listId    String   @map("list_id")
-  list      List     @relation(fields: [listId], references: [id])
-  createdAt DateTime @default(now()) @map("created_at")
-  deleted   Boolean  @default(false)
-  deletedAt DateTime? @map("deleted_at")
+  id           String    @id @default(uuid())
+  name         String
+  quantity     Int
+  checked      Boolean   @default(false)
+  updatedAt    DateTime  @map("updated_at")
+  listId       String    @map("list_id")
+  list         List      @relation(fields: [listId], references: [id])
+  createdAt    DateTime  @default(now()) @map("created_at")
+  deleted      Boolean   @default(false)
+  // Different items from the same list can have different last editors, this is good for tracking changes
+  lastEditorId String?   @map("last_editor_id")
+  lastEditor   User?     @relation("LastEditor", fields: [lastEditorId], references: [id])
 }
 
 model BufferedChange {
-  id          String   @id @default(uuid())
-  userId      String   // User who made the change
-  listId      String?  // The list affected (nullable for batch changes)
-  changes     Json     // Metadata of the changes as JSON
-  timestamp   DateTime @default(now())
-  resolved    Boolean  @default(false) // Whether the change has been processed
+  id           String   @id @default(uuid())
+  userId       String // User who made the change
+  listId       String? // The list affected (nullable for batch changes)
+  changes      Json // Metadata of the changes as JSON
+  timestamp    DateTime @default(now())
+  resolved     Boolean  @default(false) // Whether the change has been processed
   isProcessing Boolean  @default(false) // Whether the change is currently being processed
 
   // Relationships
-  user        User     @relation(fields: [userId], references: [id])
-  list        List?    @relation(fields: [listId], references: [id])
+  user User  @relation(fields: [userId], references: [id])
+  list List? @relation(fields: [listId], references: [id])
 
   @@index([userId])
   @@index([listId])
