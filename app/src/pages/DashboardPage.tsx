@@ -18,6 +18,7 @@ import useSubscriber from "@/hooks/useSubscriber";
 import { useSync } from "@/contexts/SyncContext";
 import { useDB } from "@/contexts/DBContext";
 import { Button } from "@/components/ui/button";
+import { TOAST_MESSAGES } from "@/utils/toast-messages";
 
 export const DashboardPage = () => {
   const { user } = useAuthContext();
@@ -30,9 +31,12 @@ export const DashboardPage = () => {
 
   // Initialize DB when user is available
   useEffect(() => {
-    if (user?.id) {
-      initializeUserDB(user.id);
-    }
+    const init = async () => {
+      if (user?.id) {
+        await initializeUserDB(user.id);
+      }
+    };
+    init();
   }, [user?.id, initializeUserDB]);
 
   // Hook to fetch last sync time
@@ -42,7 +46,7 @@ export const DashboardPage = () => {
     }
   }, [user?.id, fetchLastSync]);
 
-  // Hook to subscribe to socket.io events
+  // Start the subscriber to receive updates from the server
   useSubscriber(user?.id ?? '');
 
   // Hook to fetch lists from local storage
@@ -100,6 +104,7 @@ export const DashboardPage = () => {
       updatedAt: new Date(),
       ownerId: user?.id ?? "",
       items: [],
+      lastEditorId: user?.id ?? "",
     };
 
     await createList(newList);
@@ -122,9 +127,12 @@ export const DashboardPage = () => {
   };
 
   const deleteListHandler = async (list: List) => {
-    // Optimistically update UI
-    setLists(lists?.filter((l) => l.id !== list.id));
+    // Mark as deleted
     await deleteList(list.id);
+
+    // Refetch lists
+    const updatedLists = await fetchListsWithItems();
+    setLists(updatedLists);
   };
 
   const handleSync = async () => {    
@@ -132,12 +140,7 @@ export const DashboardPage = () => {
       { lists, userId: user?.id ?? '' },
       {
         onSuccess: () => {
-          toast({
-            title: "Sync request sent 📡",
-            description: "Your lists are being synced to the cloud 🌤️",
-            duration: 2000,
-          });
-
+          toast(TOAST_MESSAGES.SYNC_SENT);
           // This will happen in the next 30 seconds either way
           // But this is ok
           if (!isServerAlive) {
@@ -145,13 +148,7 @@ export const DashboardPage = () => {
           }
         },
         onError: () => {
-          toast({
-            title: "Sync failed 🚨",
-            description: "Looks like the clouds are not reachable right now 🌧️",
-            variant: "destructive",
-            duration: 3000,
-          });
-
+          toast(TOAST_MESSAGES.SYNC_FAILED);
           // Same as above
           if (isServerAlive) {
             setIsServerAlive(false);
@@ -170,7 +167,7 @@ export const DashboardPage = () => {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white sm:text-5xl">
-            Welcome back,{" "}
+            Welcome,{" "}
             <span className="text-indigo-600 dark:text-indigo-400">
               {user?.username}
             </span>
@@ -181,10 +178,10 @@ export const DashboardPage = () => {
           <NewListCard onAdd={createListHandler} />
         </div>
 
-        {lists?.length ? (
+        {lists.filter(list => !list.deleted).length ? (
           <div className="mt-6">
             <div className="flex flex-wrap justify-center gap-6">
-              {lists?.map((list) => (
+              {lists?.filter(list => !list.deleted).map((list) => (
                 <div
                   key={list.id}
                   className="break-inside-avoid hover:scale-102 transition-transform w-[400px]"
