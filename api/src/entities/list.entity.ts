@@ -10,6 +10,7 @@ export class List {
   updatedAt: Date;
   deleted: boolean;
   deletedAt?: Date;
+  lastEditorId?: string;
 }
 
 export const buildSampleList = (userId: string): Prisma.ListCreateInput => ({
