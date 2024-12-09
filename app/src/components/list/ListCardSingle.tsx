@@ -34,6 +34,18 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
   const { user } = useAuthContext();
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(list.name);
+
+  const saveToServer = (updatedList: List) => {
+    updateList(
+      { list: updatedList, userId: user?.id ?? "" },
+      {
+        onError: () => {
+          toast(TOAST_MESSAGES.SYNC_ERROR);
+        },
+      }
+    );
+  };
+
   const createHandler = (item: Partial<ListItemType>) => {
     const newItem: ListItemType = {
       id: uuidv4(),
@@ -46,52 +58,58 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
       lastEditorId: user?.id ?? "",
     };
 
-    // changes are local to this page
-    setList({ ...list, items: [...list.items, newItem] });
+    const updatedList = { ...list, items: [...list.items, newItem] };
+    setList(updatedList);
+    saveToServer(updatedList);
   };
+
   const allCompleted =
-    list.items
-      .filter((item) => !item.deleted)
-      .every((item) => item.checked) &&
+    list.items.filter((item) => !item.deleted).every((item) => item.checked) &&
     list.items.filter((item) => !item.deleted).length > 0;
 
-  const handleUpdateItem = (action: string, itemId: string, newName?: string) => {
+  const handleUpdateItem = (
+    action: string,
+    itemId: string,
+    newName?: string
+  ) => {
     let updatedItems = [...list.items];
 
     switch (action) {
-        case "delete":
-          updatedItems = list.items.map((item) =>
-            item.id === itemId ? { ...item, deleted: true, deletedAt: new Date() } : item
-          );
-          break;
-        case "toggleChecked":
-          updatedItems = list.items.map((item) =>
-            item.id === itemId ? { ...item, checked: !item.checked } : item
-          );
-          break;
-        case "toggleUnchecked":
-          updatedItems = list.items.map((item) =>
-            item.id === itemId ? { ...item, checked: false } : item
-          );
-          break;
-        case "updateName":
-          updatedItems = list.items.map((item) =>
-            item.id === itemId ? { ...item, name: newName || item.name } : item
-          );
-          break;
-        case "incrementQuantity":
-          updatedItems = list.items.map((item) =>
-            item.id === itemId ? { ...item, quantity: item.quantity + 1 } : item
-          );
-          break;
-        case "decrementQuantity":
-          updatedItems = list.items.map((item) =>
-            item.id === itemId ? { ...item, quantity: item.quantity - 1 } : item
-          );
-          break;
-        default:
-          break;
-      }
+      case "delete":
+        updatedItems = list.items.map((item) =>
+          item.id === itemId
+            ? { ...item, deleted: true, deletedAt: new Date() }
+            : item
+        );
+        break;
+      case "toggleChecked":
+        updatedItems = list.items.map((item) =>
+          item.id === itemId ? { ...item, checked: !item.checked } : item
+        );
+        break;
+      case "toggleUnchecked":
+        updatedItems = list.items.map((item) =>
+          item.id === itemId ? { ...item, checked: false } : item
+        );
+        break;
+      case "updateName":
+        updatedItems = list.items.map((item) =>
+          item.id === itemId ? { ...item, name: newName || item.name } : item
+        );
+        break;
+      case "incrementQuantity":
+        updatedItems = list.items.map((item) =>
+          item.id === itemId ? { ...item, quantity: item.quantity + 1 } : item
+        );
+        break;
+      case "decrementQuantity":
+        updatedItems = list.items.map((item) =>
+          item.id === itemId ? { ...item, quantity: item.quantity - 1 } : item
+        );
+        break;
+      default:
+        break;
+    }
 
     const updatedList = {
       ...list,
@@ -103,6 +121,7 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
     };
 
     setList(updatedList);
+    saveToServer(updatedList);
   };
 
   const handleShare = async () => {
@@ -115,7 +134,14 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
   };
 
   const editNameHandler = (newName: string) => {
-    setList({ ...list, name: newName, updatedAt: new Date(), lastEditorId: user?.id ?? "" });
+    const updatedList = { 
+      ...list, 
+      name: newName, 
+      updatedAt: new Date(), 
+      lastEditorId: user?.id ?? "" 
+    };
+    setList(updatedList);
+    saveToServer(updatedList);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -124,25 +150,10 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
     setIsEditing(false);
   };
 
-  // Send to the server
-  const onSaveChanges = () => {
-    updateList(
-      { list, userId: user?.id ?? "" },
-      {
-        onSuccess: () => {
-          toast(TOAST_MESSAGES.SAVE_SUCCESS);
-        },
-        onError: () => {
-          toast(TOAST_MESSAGES.SAVE_FAILED);
-        },
-      }
-    );
-  };
-
   return (
     <Card className="transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
       <CardHeader>
-      <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {isEditing ? (
               <form onSubmit={handleSubmit} className="flex items-center gap-2">
@@ -162,9 +173,7 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
                       <span
                         className={`text-xl font-bold ${
                           allCompleted ? "line-through text-gray-500" : ""
-                        } ${
-                          "cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
-                        }`}
+                        } ${"cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"}`}
                         onClick={() => setIsEditing(true)}
                       >
                         {list.name}
@@ -176,8 +185,8 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Copy 
-                        className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" 
+                      <Copy
+                        className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                         onClick={handleShare}
                       />
                     </TooltipTrigger>
@@ -214,12 +223,7 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
         )}
       </CardContent>
       <CardFooter className="flex justify-center">
-        <div className="flex gap-2">
-          <AddItemDialog submitHandler={createHandler} />
-          <Button variant="green" onClick={onSaveChanges}>
-            Save Changes
-          </Button>
-        </div>
+        <AddItemDialog submitHandler={createHandler} />
       </CardFooter>
     </Card>
   );
