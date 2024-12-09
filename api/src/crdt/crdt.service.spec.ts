@@ -55,4 +55,22 @@ describe('CRDTService', () => {
       await expect(service.addToBuffer('user1', [])).rejects.toThrow('Invalid input for buffering');
     });
   });
+
+  describe('isJobAlreadyQueuedForUser', () => {
+    it('should return true if a job is already queued', async () => {
+      (mockQueue.getJobs as jest.Mock).mockResolvedValue([
+        { data: { userId: 'user1' } },
+      ]);
+
+      const result = await service.isJobAlreadyQueuedForUser('user1');
+      expect(result).toBe(true);
+    });
+
+    it('should return false if no job is queued', async () => {
+      (mockQueue.getJobs as jest.Mock).mockResolvedValue([]);
+
+      const result = await service.isJobAlreadyQueuedForUser('user1');
+      expect(result).toBe(false);
+    });
+  });
 });
