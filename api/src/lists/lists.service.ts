@@ -1,45 +1,65 @@
+import { PrismaService } from '@/prisma/prisma.service';
+import { SyncListsDto } from '@/dtos/sync-lists.dto';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { List } from 'src/entities/list.entity';
-import { ZmqService } from '@/zmq/zmq.service';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { SyncListsDto } from '@/dtos/sync-lists.dto';
+import { List, User } from '@prisma/client';
+import { JOB_SETTINGS } from '@/consts/consts';
+import { CRDTService } from '@/crdt/crdt.service';
 
 @Injectable()
 export class ListsService {
   constructor(
     private prisma: PrismaService,
-    private zmqService: ZmqService,
-    @InjectQueue('crdt') private bullService: Queue,
+    private crdtService: CRDTService,
+    @InjectQueue('crdt') private crdtQueue: Queue,
   ) {}
 
-  async listHandler(data: SyncListsDto) {
-    // Called when:
-    // 1. A FE has sent a batch of lists to the server.
-    // 1.1 The owner of the lists is the user in the body.
-    // 2. A user has edited a single list, through the single-list viewer.
-    // 2.1 The owner of the list is not the user in the body.
-    // !! BE CAREFUL !!
-    const { userId, lists } = data;
+  async enqueueListChanges(data: SyncListsDto) {
+    // !!BE CAREFUL!! The user ID in the body might not be the owner of the lists, we check that below.
+    const { userId: requesterId, lists } = data;
+    const isEmptySync = lists.length === 0;
 
-    // All this handler will do is enqueue a job to resolve conflicts.
-    await this.bullService.add('resolve-conflicts', {
-      userId,
-      lists,
-    });
+    // 2 scenarios:
+    // No lists are sent: it means user has no lists and requested to be sent the lists stored on the server.
+    // Lists are sent: we can check the owner of the lists and use that as the user ID.
+    const userId = !isEmptySync ? lists[0].ownerId : requesterId;
 
-    // return immediately
-    return;
+    // Buffer the changes, if there are any
+    if (!isEmptySync) {
+      await this.crdtService.addToBuffer(userId, lists);
+    }
+
+    // If there is already a job queued for the user, return immediately
+    if (await this.crdtService.isJobAlreadyQueuedForUser(userId)) {
+      return;
+    }
+
+    // Otherwise, we enqueue a job to process the buffer for the user
+    await this.crdtQueue.add(
+      'process-buffer',
+      { userId, requesterId, isEmptySync },
+      JOB_SETTINGS,
+    );
   }
 
-  async getLists(userId: string) {
+  /**
+   * [Not in Use] Gets all lists for a given user.
+   * @param userId - The ID of the user.
+   * @returns All lists for the given user.
+   */
+  async getLists(userId: string): Promise<List[]> {
     return this.prisma.list.findMany({ where: { ownerId: userId } });
   }
 
-  async getList(id: string) {
+  /**
+   * Gets a single list by ID.
+   * @param id - The ID of the list.
+   * @returns The list with the given ID, plus the owner's username.
+   */
+  async getList(id: string): Promise<List & { owner: Partial<User> }> {
     const list = await this.prisma.list.findUnique({
-      where: { id, deleted: false },
+      where: { id },
       include: {
         items: true,
       },

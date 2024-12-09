@@ -22,7 +22,8 @@ import {
 } from "@radix-ui/react-tooltip";
 import { Copy } from "lucide-react";
 import { toast } from "@/hooks/useToast";
-
+import { TOAST_MESSAGES } from "@/utils/toast-messages";
+import { Input } from "../ui/input";
 interface ListCardProps {
   list: List;
 }
@@ -31,6 +32,20 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
   const [list, setList] = useState(initialList);
   const { mutate: updateList } = useUpdateList();
   const { user } = useAuthContext();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(list.name);
+
+  const saveToServer = (updatedList: List) => {
+    updateList(
+      { list: updatedList, userId: user?.id ?? "" },
+      {
+        onError: () => {
+          toast(TOAST_MESSAGES.SYNC_ERROR);
+        },
+      }
+    );
+  };
+
   const createHandler = (item: Partial<ListItemType>) => {
     const newItem: ListItemType = {
       id: uuidv4(),
@@ -40,62 +55,99 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
       createdAt: new Date(),
       updatedAt: new Date(),
       listId: list.id,
+      lastEditorId: user?.id ?? "",
     };
 
-    // changes are local to this file
-    setList({ ...list, items: [...list.items, newItem] });
+    const updatedList = { ...list, items: [...list.items, newItem] };
+    setList(updatedList);
+    saveToServer(updatedList);
   };
 
-  const handleUpdateItem = (action: string, itemId: string) => {
-    // only allowed: delete
-    if (action === "delete") {
-      setList({
-        ...list,
-        items: list.items.filter((item) => item.id !== itemId),
-      });
+  const allCompleted =
+    list.items.filter((item) => !item.deleted).every((item) => item.checked) &&
+    list.items.filter((item) => !item.deleted).length > 0;
+
+  const handleUpdateItem = (
+    action: string,
+    itemId: string,
+    newName?: string
+  ) => {
+    let updatedItems = [...list.items];
+
+    switch (action) {
+      case "delete":
+        updatedItems = list.items.map((item) =>
+          item.id === itemId
+            ? { ...item, deleted: true, deletedAt: new Date() }
+            : item
+        );
+        break;
+      case "toggleChecked":
+        updatedItems = list.items.map((item) =>
+          item.id === itemId ? { ...item, checked: !item.checked } : item
+        );
+        break;
+      case "toggleUnchecked":
+        updatedItems = list.items.map((item) =>
+          item.id === itemId ? { ...item, checked: false } : item
+        );
+        break;
+      case "updateName":
+        updatedItems = list.items.map((item) =>
+          item.id === itemId ? { ...item, name: newName || item.name } : item
+        );
+        break;
+      case "incrementQuantity":
+        updatedItems = list.items.map((item) =>
+          item.id === itemId ? { ...item, quantity: item.quantity + 1 } : item
+        );
+        break;
+      case "decrementQuantity":
+        updatedItems = list.items.map((item) =>
+          item.id === itemId ? { ...item, quantity: item.quantity - 1 } : item
+        );
+        break;
+      default:
+        break;
     }
+
+    const updatedList = {
+      ...list,
+      items: updatedItems.map((item) =>
+        item.id === itemId
+          ? { ...item, lastEditorId: user?.id ?? "", updatedAt: new Date() }
+          : item
+      ),
+    };
+
+    setList(updatedList);
+    saveToServer(updatedList);
   };
 
   const handleShare = async () => {
     try {
       await navigator.clipboard.writeText(list.id);
-      toast({
-        title: "List ID copied! 📋",
-        description: "Share this ID with others to collaborate",
-        duration: 2000,
-      });
+      toast(TOAST_MESSAGES.COPY_SUCCESS);
     } catch (err) {
-      toast({
-        title: "Failed to copy 😕",
-        description: "Please try again",
-        variant: "destructive",
-        duration: 2000,
-      });
+      toast(TOAST_MESSAGES.COPY_FAILED);
     }
   };
 
-  // Send to the server
-  const onSaveChanges = () => {
-    updateList(
-      { list, userId: user?.id ?? "" },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Your changes have been saved 🎉",
-            description: "The server will process them shortly",
-            duration: 2000,
-          });
-        },
-        onError: () => {
-          toast({
-            title: "Failed to save changes 😕",
-            description: "Please try again",
-            variant: "destructive",
-            duration: 2000,
-          });
-        },
-      }
-    );
+  const editNameHandler = (newName: string) => {
+    const updatedList = { 
+      ...list, 
+      name: newName, 
+      updatedAt: new Date(), 
+      lastEditorId: user?.id ?? "" 
+    };
+    setList(updatedList);
+    saveToServer(updatedList);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    editNameHandler(editedName);
+    setIsEditing(false);
   };
 
   return (
@@ -103,18 +155,46 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className={`text-xl font-bold`}>{list.name}</span>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Copy
-                    className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                    onClick={handleShare}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>Share list</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {isEditing ? (
+              <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                <Input
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  className="max-w-[200px]"
+                  autoFocus
+                  onBlur={handleSubmit}
+                />
+              </form>
+            ) : (
+              <div className="flex items-center gap-2">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className={`text-xl font-bold ${
+                          allCompleted ? "line-through text-gray-500" : ""
+                        } ${"cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"}`}
+                        onClick={() => setIsEditing(true)}
+                      >
+                        {list.name}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>Rename list</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Copy
+                        className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                        onClick={handleShare}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>Share list</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
           </div>
           <span className="text-sm text-gray-500 dark:text-gray-400">
             {list.createdAt ? formatDateToMMMDDYYYY(list.createdAt) : "N/A"}
@@ -126,12 +206,13 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
           <div className="space-y-2">
             {list.items
               .sort((a, b) => a.name.localeCompare(b.name))
+              .filter((item) => !item.deleted)
               .map((item) => (
                 <ListItem
                   key={item.id}
                   item={item}
                   updateItem={handleUpdateItem}
-                  allowChange={false}
+                  allowChange={true}
                 />
               ))}
           </div>
@@ -142,12 +223,7 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
         )}
       </CardContent>
       <CardFooter className="flex justify-center">
-        <div className="flex gap-2">
-          <AddItemDialog submitHandler={createHandler} />
-          <Button variant="green" onClick={onSaveChanges}>
-            Save Changes
-          </Button>
-        </div>
+        <AddItemDialog submitHandler={createHandler} />
       </CardFooter>
     </Card>
   );

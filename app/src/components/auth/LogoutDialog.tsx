@@ -21,7 +21,6 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { fetchListsWithItems } from "@/db/db-utils";
 import { useAuth } from "@/hooks/useAuth";
 
-
 export const LogoutDialog = () => {
   const { logout } = useAuth()
   const { user } = useAuthContext();

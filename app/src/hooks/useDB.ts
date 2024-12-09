@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getCurrentDB, initializeDB, closeDB } from '@/db/db';
+import { initializeDB, closeDB } from '@/db/db';
 import { ShoppingListDB } from '@/db/db';
     
 export const useDB = (userId: string | null) => {

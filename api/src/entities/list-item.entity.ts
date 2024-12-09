@@ -9,7 +9,7 @@ export class ListItem {
   updatedAt: Date;
   listId: string;
   deleted: boolean;
-  deletedAt?: Date;
+  lastEditorId?: string;
 }
 
 export const buildSampleItem = (): Omit<
