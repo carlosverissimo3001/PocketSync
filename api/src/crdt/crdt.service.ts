@@ -1,5 +1,5 @@
 import { PrismaService } from '@/prisma/prisma.service';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { BufferedChange } from '@prisma/client';
@@ -30,6 +30,8 @@ interface ChangePayload {
 
 @Injectable()
 export class CRDTService {
+  private readonly logger = new Logger(CRDTService.name);
+
   constructor(
     private prisma: PrismaService,
     @InjectQueue('crdt') private crdtQueue: Queue,
@@ -47,7 +49,16 @@ export class CRDTService {
     existingListId: string,
     requesterId: string,
   ): Promise<ListEntity> {
-    // A simple Last-Write-Wins strategy
+    if (!incomingChanges || incomingChanges.length === 0) {
+      throw new Error('No changes provided for resolution');
+    }
+    if (!existingListId) {
+      throw new Error('Invalid or missing list ID');
+    }
+    if (!requesterId) {
+      throw new Error('Invalid or missing requester ID');
+    }
+
     const existingList = await this.prisma.list.findUnique({
       where: { id: existingListId },
       include: { items: true },
@@ -55,7 +66,7 @@ export class CRDTService {
 
     // Not yet in DB -> Shouldn't happen
     if (!existingList) {
-      throw new Error('List not found');
+      throw new Error(`List with ID ${existingListId} not found`);
     }
 
     // Did any of the changes deleted the list?
@@ -153,29 +164,19 @@ export class CRDTService {
    * @param lists - The lists to be buffered
    */
   async addToBuffer(userId: string, lists: ListEntity[]) {
-    for (const list of lists) {
-      // Is this a new list
-      const existingList = await this.prisma.list.findUnique({
-        where: { id: list.id },
-      });
-
-      // If it is, we need to create it in the DB
-      if (!existingList) {
-        await this.prisma.list.create({
-          data: buildListToPrisma(list),
-        });
-      }
-
-      await this.prisma.bufferedChange.create({
-        data: {
-          userId,
-          listId: list.id,
-          changes: JSON.stringify(list),
-          timestamp: new Date(),
-          resolved: false,
-        },
-      });
+    if (!userId || !lists || lists.length === 0) {
+      throw new Error('Invalid input for buffering');
     }
+
+    const changes = lists.map((list) => ({
+      userId,
+      listId: list.id,
+      changes: JSON.stringify(list),
+      timestamp: new Date(),
+      resolved: false,
+    }));
+
+    await this.prisma.bufferedChange.createMany({ data: changes });
   }
 
   /**
