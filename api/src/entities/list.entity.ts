@@ -9,7 +9,6 @@ export class List {
   items: ListItem[];
   updatedAt: Date;
   deleted: boolean;
-  deletedAt?: Date;
   lastEditorId?: string;
 }
 
@@ -59,7 +58,6 @@ export const buildChangesToPrisma = (
     lastEditor: { connect: { id: requesterId } },
     updatedAt: listData.updatedAt,
     deleted: listData.deleted ?? false,
-    deletedAt: listData.deletedAt ?? undefined,
     items: {
       deleteMany: {}, // Clear existing items
       create:

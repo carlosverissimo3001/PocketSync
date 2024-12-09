@@ -82,7 +82,17 @@ export class CRDTService {
       });
     }
 
-    // List was not deleted, let's process the items
+    // List was not deleted, update the metadata
+    await this.prisma.list.update({
+      where: { id: existingListId },
+      data: {
+        name: sortedChanges[0].changes.name,
+        updatedAt: sortedChanges[0].changes.updatedAt,
+        lastEditorId: requesterId,
+      },
+    });
+
+    // Item changes processing
     const latestItemStates = new Map<
       string,
       {
