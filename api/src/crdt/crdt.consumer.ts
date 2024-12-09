@@ -10,11 +10,12 @@ import { List } from '@/entities';
 @Injectable()
 @Processor('crdt')
 export class CRDTConsumer {
+  private readonly logger = new Logger(CRDTConsumer.name);
+
   constructor(
     private readonly zmqService: ZmqService,
     private readonly prisma: PrismaService,
     private readonly crdtService: CRDTService,
-    private readonly logger = new Logger(CRDTConsumer.name)
   ) {}
 
   @Process('process-buffer')
@@ -22,16 +23,30 @@ export class CRDTConsumer {
     try {
       const { isEmptySync, userId, requesterId } = job.data;
 
+      // Entry validation
+      if (!userId) {
+        this.logger.error('Missing userId in job data');
+        throw new Error('Invalid job data: Missing userId');
+      }
+
       if (isEmptySync) {
+        this.logger.log(`Handling empty sync for userId: ${userId}`);
         await this.handleEmptySync(userId);
         return;
       }
 
+      this.logger.log(`Processing buffer for userId: ${userId}`);
+
       // Fetch unresolved changes for the user
       const bufferedChanges = await this.prisma.bufferedChange.findMany({
         where: { userId, resolved: false },
-        orderBy: { timestamp: 'asc' }, // Optional, for deterministic processing
+        orderBy: { timestamp: 'asc' },
       });
+
+      if (bufferedChanges.length === 0) {
+        this.logger.warn(`No buffered changes found for userId: ${userId}`);
+        return;
+      }
 
       // Group these changes by list ID for batch processing
       const changesByList = bufferedChanges.reduce(
@@ -43,7 +58,7 @@ export class CRDTConsumer {
         {} as Record<string, typeof bufferedChanges>,
       );
 
-      const resolvedLists = [];
+      const resolvedLists: List[] = [];
 
       // For each list, resolve the changes
       for (const listId in changesByList) {
@@ -63,8 +78,9 @@ export class CRDTConsumer {
 
       // Publish the resolved lists to all the client's subscribers
       await this.zmqService.publishUserLists(userId, resolvedLists);
+      this.logger.log(`Successfully processed buffer for userId: ${userId}`);
     } catch (error) {
-      console.error('Error processing buffer:', error);
+      this.logger.error('Error processing buffer:', error.stack);
       throw error; // Rethrow to let Bull handle the retry
     }
   }
