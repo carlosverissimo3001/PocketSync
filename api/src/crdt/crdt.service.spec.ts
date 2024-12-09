@@ -39,7 +39,54 @@ describe('CRDTService', () => {
       service = module.get<CRDTService>(CRDTService);
       prismaService = module.get<PrismaService>(PrismaService);
     });
-    
+  
+    describe('resolveChanges', () => {
+      it('should resolve changes and update the list', async () => {
+        jest.spyOn(prismaService.list, 'findUnique').mockResolvedValue({
+          id: 'list1',
+          name: 'Original List',
+          createdAt: new Date('2024-12-01'),
+          updatedAt: new Date('2024-12-01'),
+          ownerId: 'owner1',
+          deleted: false,
+          lastEditorId: 'user1',
+          items: jest.fn().mockResolvedValue([]),
+        });
+  
+        jest.spyOn(prismaService.list, 'update').mockResolvedValue({
+          id: 'list1',
+          name: 'Updated List',
+          createdAt: new Date('2024-12-01'),
+          updatedAt: new Date('2024-12-09'),
+          ownerId: 'owner1',
+          deleted: false,
+          lastEditorId: 'user1',
+          items: jest.fn().mockResolvedValue([]), 
+        });
+  
+        const result = await service.resolveChanges(
+          [
+            {
+              id: '1',
+              listId: 'list1',
+              changes: JSON.stringify({
+                id: 'list1',
+                name: 'Updated List',
+                updatedAt: '2023-12-09T12:00:00Z',
+                deleted: false,
+                items: [],
+              }),
+            },
+          ] as any,
+          'list1',
+          'user1',
+        );
+  
+        expect(result.name).toBe('Updated List');
+        expect(prismaService.list.update).toHaveBeenCalled();
+      });
+    });
+  
     describe('addToBuffer', () => {
       it('should add lists to the buffer', async () => {
         jest.spyOn(prismaService.bufferedChange, 'createMany').mockResolvedValue(undefined);
