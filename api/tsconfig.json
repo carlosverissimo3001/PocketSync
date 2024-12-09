@@ -21,5 +21,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "../bridge/server.js"]
+  "include": ["src", "../bridge/server.js", "src/crdt/crdt.consumer.spec.ts"]
 }
