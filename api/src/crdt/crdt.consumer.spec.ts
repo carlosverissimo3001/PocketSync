@@ -57,6 +57,52 @@ describe('CRDTConsumer', () => {
       expect(zmqService.publishUserLists).toHaveBeenCalledWith('123', []);
     });
 
+    it('should process buffered changes', async () => {
+      const job = { data: { isEmptySync: false, userId: '123', requesterId: '456' } } as Job;
+    
+      jest.spyOn(prismaService.bufferedChange, 'findMany').mockResolvedValue([
+        {
+          id: '1',
+          userId: '123',
+          listId: 'list1',
+          changes: JSON.stringify({ name: 'List 1', items: [] }),
+          timestamp: new Date(),
+          resolved: false,
+          isProcessing: false,
+        },
+      ]);
+      jest.spyOn(crdtService, 'resolveChanges').mockResolvedValue({ id: 'list1' } as any);
+      jest.spyOn(prismaService.bufferedChange, 'updateMany').mockResolvedValue({ count: 1 });
+      jest.spyOn(zmqService, 'publishUserLists').mockResolvedValue();
+    
+      await consumer.handleProcessBuffer(job);
+    
+      expect(prismaService.bufferedChange.findMany).toHaveBeenCalledWith({
+        where: { userId: '123', resolved: false },
+        orderBy: { timestamp: 'asc' },
+      });
+      expect(crdtService.resolveChanges).toHaveBeenCalledWith(
+        [
+          {
+            id: '1',
+            userId: '123',
+            listId: 'list1',
+            changes: JSON.stringify({ name: 'List 1', items: [] }),
+            timestamp: expect.any(Date),
+            resolved: false,
+            isProcessing: false,
+          },
+        ],
+        'list1',
+        '456',
+      );
+      expect(prismaService.bufferedChange.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: ['1'] } },
+        data: { resolved: true },
+      });
+      expect(zmqService.publishUserLists).toHaveBeenCalledWith('123', [{ id: 'list1' }]);
+    });    
+
     it('should log and rethrow errors', async () => {
       const job = { data: { isEmptySync: false, userId: '123', requesterId: '456' } } as Job;
       jest.spyOn(prismaService.bufferedChange, 'findMany').mockRejectedValue(new Error('DB Error'));
