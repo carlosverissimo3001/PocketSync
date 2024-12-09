@@ -1,11 +1,10 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { ZmqService } from '@/zmq/zmq.service';
 import { Process, Processor } from '@nestjs/bull';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import { ProcessBufferDto } from '@/dtos/process-buffer.dto';
 import { CRDTService } from './crdt.service';
-import { User } from '@prisma/client';
 import { List } from '@/entities';
 
 @Injectable()
@@ -15,6 +14,7 @@ export class CRDTConsumer {
     private readonly zmqService: ZmqService,
     private readonly prisma: PrismaService,
     private readonly crdtService: CRDTService,
+    private readonly logger = new Logger(CRDTConsumer.name)
   ) {}
 
   @Process('process-buffer')
@@ -74,10 +74,22 @@ export class CRDTConsumer {
    * @param userId - The ID of the user
    */
   private async handleEmptySync(userId: string): Promise<void> {
-    const lists = await this.prisma.list.findMany({
-      where: { ownerId: userId },
-      include: { items: true },
-    });
-    await this.zmqService.publishUserLists(userId, lists);
+    try {
+      const lists = await this.prisma.list.findMany({
+        where: { ownerId: userId },
+        include: { items: true },
+      });
+
+      if (lists.length === 0) {
+        this.logger.warn(`No lists found for userId: ${userId}`);
+      } else {
+        this.logger.log(`Publishing ${lists.length} lists for userId: ${userId}`);
+      }
+
+      await this.zmqService.publishUserLists(userId, lists);
+    } catch (error) {
+      this.logger.error(`Error handling empty sync for userId: ${userId}`, error.stack);
+      throw error;
+    }
   }
 }
