@@ -168,6 +168,47 @@ export class CRDTService {
       throw new Error('Invalid input for buffering');
     }
 
+    for (const list of lists) {
+      const existingList = await this.prisma.list.findUnique({
+        where: { id: list.id },
+      });
+
+      if (!existingList) {
+        const data: any = {
+          id: list.id,
+          name: list.name,
+          owner: {
+            connect: {
+              id: list.ownerId,
+            },
+          },
+          createdAt: list.createdAt,
+          updatedAt: list.updatedAt,
+          deleted: list.deleted,
+          items: {
+            create: list.items.map((item) => ({
+              id: item.id,
+              name: item.name,
+              quantity: item.quantity,
+              checked: item.checked,
+              updatedAt: item.updatedAt,
+              deleted: item.deleted,
+            })),
+          },
+        };
+
+        if (list.lastEditorId) {
+          data.lastEditor = {
+            connect: {
+              id: list.lastEditorId,
+            },
+          };
+        }
+
+        await this.prisma.list.create({ data });
+      }
+    }
+
     const changes = lists.map((list) => ({
       userId,
       listId: list.id,
