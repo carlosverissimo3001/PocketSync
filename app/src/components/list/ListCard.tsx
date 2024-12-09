@@ -30,25 +30,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
-import { Copy } from "lucide-react";
+import { Copy, Info } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
-
+import { useAuthContext } from "@/contexts/AuthContext";
+import { TOAST_MESSAGES } from "@/utils/toast-messages";
 interface ListCardProps {
   list: List;
   updateList: (list: List) => void;
   handleDelete: (list: List) => void;
 }
 
-export const ListCard = ({
-  list,
-  updateList,
-  handleDelete
-}: ListCardProps) => {
+export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(list.name);
+  const { user } = useAuthContext();
   const allCompleted =
-    list.items.every((item) => item.checked) && list.items.length > 0;
+    list.items.filter((item) => !item.deleted).every((item) => item.checked) &&
+    list.items.filter((item) => !item.deleted).length > 0;
 
   const createHandler = (item: Partial<ListItemType>) => {
     const newItem: ListItemType = {
@@ -59,6 +58,7 @@ export const ListCard = ({
       createdAt: new Date(),
       updatedAt: new Date(),
       listId: list.id,
+      lastEditorId: user?.id ?? "",
     };
     const updatedItems = [...list.items, newItem];
 
@@ -70,25 +70,39 @@ export const ListCard = ({
       .map((item) => {
         if (item.id !== itemId) return item;
 
+        // Update the item metadata
+        const updatedItem = {
+          ...item,
+          updatedAt: new Date(),
+          lastEditorId: user?.id ?? "",
+        };
+
         switch (action) {
           case "toggleChecked":
-            return { ...item, checked: !item.checked };
+            return { ...updatedItem, checked: !item.checked };
           case "toggleUnchecked":
-            return { ...item, checked: false };
+            return { ...updatedItem, checked: false };
           case "delete":
-            return { ...item, deleted: true, deletedAt: new Date() };
+            return { ...updatedItem, deleted: true, deletedAt: new Date() };
           case "incrementQuantity":
-            return { ...item, quantity: item.quantity + 1 };
+            return { ...updatedItem, quantity: item.quantity + 1 };
           case "decrementQuantity":
-            return { ...item, quantity: item.quantity - 1 };
+            return { ...updatedItem, quantity: item.quantity - 1 };
           case "updateName":
-            return { ...item, name: newName || item.name };
+            return { ...updatedItem, name: newName || item.name };
           default:
-            return item;
+            return updatedItem;
         }
       })
       .filter(Boolean) as ListItemType[];
-    updateList({ ...list, items: updatedItems });
+
+    // We can also consider that the list has been updated
+    updateList({
+      ...list,
+      items: updatedItems,
+      updatedAt: new Date(),
+      lastEditorId: user?.id ?? "",
+    });
   };
 
   const editNameHandler = (newName: string) => {
@@ -104,18 +118,9 @@ export const ListCard = ({
   const handleShare = async () => {
     try {
       await navigator.clipboard.writeText(list.id);
-      toast({
-        title: "List ID copied! 📋",
-        description: "Share this ID with others to collaborate",
-        duration: 2000,
-      });
+      toast(TOAST_MESSAGES.COPY_SUCCESS);
     } catch (err) {
-      toast({
-        title: "Failed to copy 😕",
-        description: "Please try again",
-        variant: "destructive",
-        duration: 2000,
-      });
+      toast(TOAST_MESSAGES.COPY_FAILED);
     }
   };
 
@@ -156,8 +161,8 @@ export const ListCard = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Copy 
-                        className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" 
+                      <Copy
+                        className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                         onClick={handleShare}
                       />
                     </TooltipTrigger>
@@ -167,9 +172,23 @@ export const ListCard = ({
               </div>
             )}
           </div>
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            {list.createdAt ? formatDateToMMMDDYYYY(list.createdAt) : "N/A"}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {list.createdAt ? formatDateToMMMDDYYYY(list.createdAt) : "N/A"}
+            </span>
+            {list.lastEditorId && list.lastEditorId !== user?.id && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-blue-500" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Last edited by another user
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -177,10 +196,11 @@ export const ListCard = ({
           <div className="space-y-2">
             {list.items
               .sort((a, b) => a.name.localeCompare(b.name))
+              .filter((item) => !item.deleted)
               .map((item) => (
                 <ListItem
-                key={item.id}
-                item={item}
+                  key={item.id}
+                  item={item}
                   updateItem={updateItem}
                   allowChange={true}
                 />

@@ -1,27 +1,19 @@
-import { List } from "@/types/list.types";
+import { List, ListItem } from "@/types/list.types";
 import { getCurrentDB } from "./db";
 
 export const fetchListsWithItems = async () => {
-  try {
-    const db = getCurrentDB();
-    const lists = await db.lists.filter(list => !list.deleted).toArray();
-    const listsWithItems = await Promise.all(
-      lists.map(async (list) => ({
-        ...list,
-        items: await db.items
-          .where("listId")
-          .equals(list.id)
-          .filter(item => !item.deleted)
-          .toArray()
-      }))
-    );
-    return listsWithItems;
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('not initialized')) {
-      return [];
-    }
-    throw error;
-  }
+  const db = getCurrentDB();
+  const lists = await db.lists.toArray();
+  const listsWithItems = await Promise.all(
+    lists.map(async (list) => ({
+      ...list,
+      items: await db.items
+        .where("listId")
+        .equals(list.id)
+        .toArray()
+    }))
+  );
+  return listsWithItems;
 };
 
 export const createList = async (list: List) => {
@@ -51,12 +43,12 @@ export const deleteList = async (listId: string) => {
     await db.items
       .where("listId")
       .equals(listId)
-      .modify({ deleted: true, deletedAt: new Date() });
+      .modify({ deleted: true, updatedAt: new Date() });
     
     await db.lists
       .where('id')
       .equals(listId)
-      .modify({ deleted: true, deletedAt: new Date() });
+      .modify({ deleted: true, updatedAt: new Date() });
   });
 };
 

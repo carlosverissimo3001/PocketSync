@@ -16,7 +16,7 @@ SDLE Second Assignment of group T&lt;m&gt;&lt;n&gt;G&lt;p&gt;&lt;q&gt;.
 - [`app`](./app) - The web app
 - [`docs`](./docs) - Documentation
 - [`bridge`](./bridge)
-  - In other to use ZeroMQ to its full extent, we establish a PUB/SUB relationship between the API and a server, we call "the Bridge".
+  - In order to use ZeroMQ to its full extent, we establish a PUB/SUB relationship between the API and a server, that we call "the Bridge".
   - Then, using Socket.IO, the bridge will forward the messages to the web app.
 
 

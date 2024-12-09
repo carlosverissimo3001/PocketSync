@@ -9,6 +9,7 @@ export interface List {
     updatedAt?: Date;
     deleted?: boolean;
     deletedAt?: Date;
+    lastEditorId: string;
 }
 
 export interface ListExtended extends List {
@@ -25,4 +26,5 @@ export interface ListItem {
     updatedAt?: Date;
     deleted?: boolean;
     deletedAt?: Date;
+    lastEditorId: string;
 }

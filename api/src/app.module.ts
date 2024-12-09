@@ -6,7 +6,7 @@ import { ListsModule } from './lists/lists.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ZmqModule } from './zmq/zmq.module';
 import { BullModule } from '@nestjs/bull';
-import { CrdtModule } from './crdt/crdt.module';
+import { CRDTModule } from './crdt/crdt.module';
 
 @Module({
   imports: [
@@ -17,7 +17,7 @@ import { CrdtModule } from './crdt/crdt.module';
         password: process.env.REDIS_PASSWORD,
       },
     }),
-    CrdtModule,
+    CRDTModule,
     UsersModule,
     ListsModule,
     PrismaModule,
