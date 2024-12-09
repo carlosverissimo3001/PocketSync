@@ -110,4 +110,32 @@ describe('CRDTConsumer', () => {
       await expect(consumer.handleProcessBuffer(job)).rejects.toThrow('DB Error');
     });
   });
+
+  describe('handleEmptySync', () => {
+    it('should handle empty sync with lists', async () => {
+      jest.spyOn(prismaService.list, 'findMany').mockResolvedValue([{ id: '1' } as any]);
+      jest.spyOn(zmqService, 'publishUserLists').mockResolvedValue();
+
+      await consumer['handleEmptySync']('123');
+
+      expect(prismaService.list.findMany).toHaveBeenCalledWith({
+        where: { ownerId: '123' },
+        include: { items: true },
+      });
+      expect(zmqService.publishUserLists).toHaveBeenCalledWith('123', [{ id: '1' }]);
+    });
+
+    it('should handle empty sync with no lists', async () => {
+      jest.spyOn(prismaService.list, 'findMany').mockResolvedValue([]);
+      jest.spyOn(zmqService, 'publishUserLists').mockResolvedValue();
+
+      await consumer['handleEmptySync']('123');
+
+      expect(prismaService.list.findMany).toHaveBeenCalledWith({
+        where: { ownerId: '123' },
+        include: { items: true },
+      });
+      expect(zmqService.publishUserLists).toHaveBeenCalledWith('123', []);
+    });
+  });
 });

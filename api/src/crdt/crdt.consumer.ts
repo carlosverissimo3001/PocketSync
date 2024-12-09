@@ -30,12 +30,12 @@ export class CRDTConsumer {
       }
 
       if (isEmptySync) {
-        this.logger.log(`Handling empty sync for userId: ${userId}`);
+        this.logger.log('Handling empty sync for userId: ${userId}');
         await this.handleEmptySync(userId);
         return;
       }
 
-      this.logger.log(`Processing buffer for userId: ${userId}`);
+      this.logger.log('Processing buffer for userId: ${userId}');
 
       // Fetch unresolved changes for the user
       const bufferedChanges = await this.prisma.bufferedChange.findMany({
@@ -44,7 +44,7 @@ export class CRDTConsumer {
       });
 
       if (bufferedChanges.length === 0) {
-        this.logger.warn(`No buffered changes found for userId: ${userId}`);
+        this.logger.warn('No buffered changes found for userId: ${userId}');
         return;
       }
 
@@ -78,7 +78,7 @@ export class CRDTConsumer {
 
       // Publish the resolved lists to all the client's subscribers
       await this.zmqService.publishUserLists(userId, resolvedLists);
-      this.logger.log(`Successfully processed buffer for userId: ${userId}`);
+      this.logger.log('Successfully processed buffer for userId: ${userId}');
     } catch (error) {
       this.logger.error('Error processing buffer:', error.stack);
       throw error; // Rethrow to let Bull handle the retry
@@ -97,14 +97,14 @@ export class CRDTConsumer {
       });
 
       if (lists.length === 0) {
-        this.logger.warn(`No lists found for userId: ${userId}`);
+        this.logger.warn('No lists found for userId: ${userId}');
       } else {
-        this.logger.log(`Publishing ${lists.length} lists for userId: ${userId}`);
+        this.logger.log('Publishing ${lists.length} lists for userId: ${userId}');
       }
 
       await this.zmqService.publishUserLists(userId, lists);
     } catch (error) {
-      this.logger.error(`Error handling empty sync for userId: ${userId}`, error.stack);
+      this.logger.error('Error handling empty sync for userId: ${userId}', error.stack);
       throw error;
     }
   }
