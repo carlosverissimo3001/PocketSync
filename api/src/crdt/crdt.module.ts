@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
-import { CrdtConsumer } from './crdt.consumer';
 import { ZmqModule } from '@/zmq/zmq.module';
 import { PrismaModule } from '@/prisma/prisma.module';
+import { CRDTService } from './crdt.service';
+import { CRDTConsumer } from './crdt.consumer';
 
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { PrismaModule } from '@/prisma/prisma.module';
     ZmqModule,
     PrismaModule,
   ],
-  providers: [CrdtConsumer],
-  exports: [BullModule],
+  providers: [CRDTService, CRDTConsumer],
+  exports: [CRDTService],
 })
-export class CrdtModule {}
+export class CRDTModule {}

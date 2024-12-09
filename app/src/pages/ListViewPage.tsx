@@ -45,6 +45,19 @@ export const ListViewPage = () => {
     );
   }
 
+  if (data.deleted) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 space-y-4 bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700">
+        <p className="text-lg font-semibold text-gray-600 dark:text-gray-300">
+          This shared list is no longer available 💔
+    </p>
+    <p className="text-sm text-gray-500 dark:text-gray-400">
+      The owner of this list has deleted it
+        </p>
+      </div>
+    );
+  }
+
   const list = data as ListExtended;
   const isOwner = list.ownerId === user?.id;
 
@@ -82,7 +95,7 @@ export const ListViewPage = () => {
                 </span>
               </h1>
               <p className="text-lg text-gray-600 dark:text-gray-300">
-                Feel free to add or remove items from this shared list
+                Feel free to edit this shared list
               </p>
             </div>
             <div className="flex justify-center gap-4 pt-4">

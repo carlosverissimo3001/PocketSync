@@ -4,7 +4,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import * as zmq from 'zeromq';
-import { List } from '@/entities/list.entity';
+import { List } from '@/entities';
 
 @Injectable()
 export class ZmqService implements OnModuleInit, OnApplicationShutdown {

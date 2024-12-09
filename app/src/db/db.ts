@@ -15,8 +15,8 @@ export class ShoppingListDB extends Dexie {
   constructor(userId: string) {
     super(`ShoppingListDB_${userId}`);
     this.version(1).stores({
-      lists: "id, name, ownerId, createdAt, updatedAt, deleted, deletedAt",
-      items: "id, listId, name, quantity, checked, createdAt, updatedAt, deleted, deletedAt",
+      lists: "id, name, ownerId, createdAt, updatedAt, deleted, lastEditorId",
+      items: "id, listId, name, quantity, checked, createdAt, updatedAt, deleted, lastEditorId",
       serverSyncs: "id, lastSync, listLength",
     });
   }
@@ -31,14 +31,17 @@ export const initializeDB = (userId: string) => {
 
 export const closeDB = async () => {
   if (currentDB) {
-    await currentDB.close();
+    currentDB.close();
     currentDB = null;
   }
 };
 
-export const getCurrentDB = () => {
+export const getCurrentDB = (userId?: string) => {
   if (!currentDB) {
-    throw new Error('Database not initialized. Call initializeDB first.');
+    if (!userId) {
+      throw new Error('Database not initialized and no userId provided to initialize it.');
+    }
+    currentDB = initializeDB(userId);
   }
   return currentDB;
 };
