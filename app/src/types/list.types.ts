@@ -8,7 +8,6 @@ export interface List {
     items: ListItem[];
     updatedAt?: Date;
     deleted?: boolean;
-    deletedAt?: Date;
     lastEditorId: string;
 }
 
@@ -25,6 +24,5 @@ export interface ListItem {
     createdAt?: Date;
     updatedAt?: Date;
     deleted?: boolean;
-    deletedAt?: Date;
     lastEditorId: string;
 }

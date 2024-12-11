@@ -58,8 +58,10 @@ describe('CRDTConsumer', () => {
     });
 
     it('should process buffered changes', async () => {
-      const job = { data: { isEmptySync: false, userId: '123', requesterId: '456' } } as Job;
-    
+      const job = {
+        data: { isEmptySync: false, userId: '123', requesterId: '456' },
+      } as Job;
+
       jest.spyOn(prismaService.bufferedChange, 'findMany').mockResolvedValue([
         {
           id: '1',
@@ -71,12 +73,16 @@ describe('CRDTConsumer', () => {
           isProcessing: false,
         },
       ]);
-      jest.spyOn(crdtService, 'resolveChanges').mockResolvedValue({ id: 'list1' } as any);
-      jest.spyOn(prismaService.bufferedChange, 'updateMany').mockResolvedValue({ count: 1 });
+      jest
+        .spyOn(crdtService, 'resolveChanges')
+        .mockResolvedValue({ id: 'list1' } as any);
+      jest
+        .spyOn(prismaService.bufferedChange, 'updateMany')
+        .mockResolvedValue({ count: 1 });
       jest.spyOn(zmqService, 'publishUserLists').mockResolvedValue();
-    
+
       await consumer.handleProcessBuffer(job);
-    
+
       expect(prismaService.bufferedChange.findMany).toHaveBeenCalledWith({
         where: { userId: '123', resolved: false },
         orderBy: { timestamp: 'asc' },
@@ -100,20 +106,30 @@ describe('CRDTConsumer', () => {
         where: { id: { in: ['1'] } },
         data: { resolved: true },
       });
-      expect(zmqService.publishUserLists).toHaveBeenCalledWith('123', [{ id: 'list1' }]);
-    });    
+      expect(zmqService.publishUserLists).toHaveBeenCalledWith('123', [
+        { id: 'list1' },
+      ]);
+    });
 
     it('should log and rethrow errors', async () => {
-      const job = { data: { isEmptySync: false, userId: '123', requesterId: '456' } } as Job;
-      jest.spyOn(prismaService.bufferedChange, 'findMany').mockRejectedValue(new Error('DB Error'));
+      const job = {
+        data: { isEmptySync: false, userId: '123', requesterId: '456' },
+      } as Job;
+      jest
+        .spyOn(prismaService.bufferedChange, 'findMany')
+        .mockRejectedValue(new Error('DB Error'));
 
-      await expect(consumer.handleProcessBuffer(job)).rejects.toThrow('DB Error');
+      await expect(consumer.handleProcessBuffer(job)).rejects.toThrow(
+        'DB Error',
+      );
     });
   });
 
   describe('handleEmptySync', () => {
     it('should handle empty sync with lists', async () => {
-      jest.spyOn(prismaService.list, 'findMany').mockResolvedValue([{ id: '1' } as any]);
+      jest
+        .spyOn(prismaService.list, 'findMany')
+        .mockResolvedValue([{ id: '1' } as any]);
       jest.spyOn(zmqService, 'publishUserLists').mockResolvedValue();
 
       await consumer['handleEmptySync']('123');
@@ -122,7 +138,9 @@ describe('CRDTConsumer', () => {
         where: { ownerId: '123' },
         include: { items: true },
       });
-      expect(zmqService.publishUserLists).toHaveBeenCalledWith('123', [{ id: '1' }]);
+      expect(zmqService.publishUserLists).toHaveBeenCalledWith('123', [
+        { id: '1' },
+      ]);
     });
 
     it('should handle empty sync with no lists', async () => {

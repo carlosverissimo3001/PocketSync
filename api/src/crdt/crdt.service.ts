@@ -229,4 +229,17 @@ export class CRDTService {
     const jobs = await this.crdtQueue.getJobs(['waiting', 'active', 'delayed']);
     return jobs.some((job) => job.data.userId === userId);
   }
+
+  async cleanupResolvedBufferChanges() {
+    const oneHourAgo = new Date();
+    oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+
+    const result = await this.prisma.bufferedChange.deleteMany({
+      where: {
+        AND: [{ resolved: true }, { timestamp: { lt: oneHourAgo } }],
+      },
+    });
+
+    return { count: result.count };
+  }
 }

@@ -9,6 +9,10 @@ import { CRDTConsumer } from './crdt.consumer';
   imports: [
     BullModule.registerQueue({
       name: 'crdt',
+      defaultJobOptions: {
+        removeOnComplete: true,
+        attempts: 3,
+      },
     }),
     ZmqModule,
     PrismaModule,

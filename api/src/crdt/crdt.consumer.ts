@@ -1,11 +1,13 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { ZmqService } from '@/zmq/zmq.service';
-import { Process, Processor } from '@nestjs/bull';
+import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Injectable, Logger } from '@nestjs/common';
-import { Job } from 'bull';
+import { Job, Queue } from 'bull';
 import { ProcessBufferDto } from '@/dtos/process-buffer.dto';
 import { CRDTService } from './crdt.service';
 import { List } from '@/entities';
+import { CRDT_QUEUE } from '@/consts/consts';
+import { BUFFER_CLEANUP_CRON } from '@/consts/consts';
 
 @Injectable()
 @Processor('crdt')
@@ -16,7 +18,19 @@ export class CRDTConsumer {
     private readonly zmqService: ZmqService,
     private readonly prisma: PrismaService,
     private readonly crdtService: CRDTService,
+    @InjectQueue(CRDT_QUEUE) private readonly crdtQueue: Queue,
   ) {}
+
+  // Cleans up the resolved buffer changes every hour
+  async onModuleInit() {
+    await this.crdtQueue.add(
+      'cleanup-buffer',
+      {},
+      {
+        repeat: { cron: BUFFER_CLEANUP_CRON },
+      },
+    );
+  }
 
   @Process('process-buffer')
   async handleProcessBuffer(job: Job<ProcessBufferDto>) {
@@ -99,12 +113,31 @@ export class CRDTConsumer {
       if (lists.length === 0) {
         this.logger.warn('No lists found for userId: ${userId}');
       } else {
-        this.logger.log('Publishing ${lists.length} lists for userId: ${userId}');
+        this.logger.log(
+          'Publishing ${lists.length} lists for userId: ${userId}',
+        );
       }
 
       await this.zmqService.publishUserLists(userId, lists);
     } catch (error) {
-      this.logger.error('Error handling empty sync for userId: ${userId}', error.stack);
+      this.logger.error(
+        'Error handling empty sync for userId: ${userId}',
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  @Process('cleanup-buffer')
+  async handleBufferCleanup() {
+    this.logger.log('Starting buffer cleanup job...');
+
+    try {
+      const result = await this.crdtService.cleanupResolvedBufferChanges();
+      this.logger.log(`Cleaned up ${result.count} resolved buffer changes`);
+      return result;
+    } catch (error) {
+      this.logger.error('Failed to cleanup buffer changes:', error);
       throw error;
     }
   }

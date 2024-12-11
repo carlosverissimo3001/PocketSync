@@ -8,3 +8,6 @@ export const JOB_SETTINGS: JobOptions = {
     delay: 500,
   },
 };
+
+export const BUFFER_CLEANUP_CRON = '0 * * * *';
+export const CRDT_QUEUE = 'crdt';
