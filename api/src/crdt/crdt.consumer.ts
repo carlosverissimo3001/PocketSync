@@ -8,6 +8,7 @@ import { CRDTService } from './crdt.service';
 import { List } from '@/entities';
 import { CRDT_QUEUE } from '@/consts/consts';
 import { BUFFER_CLEANUP_CRON } from '@/consts/consts';
+import { Validate } from 'class-validator';
 
 @Injectable()
 @Processor('crdt')
@@ -33,15 +34,10 @@ export class CRDTConsumer {
   }
 
   @Process('process-buffer')
+  @Validate(ProcessBufferDto)
   async handleProcessBuffer(job: Job<ProcessBufferDto>) {
     try {
       const { isEmptySync, userId, requesterId } = job.data;
-
-      // Entry validation
-      if (!userId) {
-        this.logger.error('Missing userId in job data');
-        throw new Error('Invalid job data: Missing userId');
-      }
 
       if (isEmptySync) {
         this.logger.log('Handling empty sync for userId: ${userId}');
@@ -100,7 +96,8 @@ export class CRDTConsumer {
   }
 
   /**
-   * If the client sends to lists, it means that it wants to fetch the lists from the server.
+   * If the client sends no lists or there are no changes to the lists,
+   * it means that they want to fetch the lists from the server.
    * @param userId - The ID of the user
    */
   private async handleEmptySync(userId: string): Promise<void> {
@@ -130,7 +127,9 @@ export class CRDTConsumer {
 
   @Process('cleanup-buffer')
   async handleBufferCleanup() {
-    this.logger.log('Starting buffer cleanup job...');
+    this.logger.log(
+      `Starting buffer cleanup job... Current time: ${new Date().toISOString()}`,
+    );
 
     try {
       const result = await this.crdtService.cleanupResolvedBufferChanges();

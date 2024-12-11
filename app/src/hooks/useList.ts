@@ -10,6 +10,17 @@ export const useList = (id: string) => {
     });
 };
 
+export const useLists = (userId: string) => {
+    return useQuery({
+        queryKey: ["lists", userId],
+        queryFn: async () => {
+            return listService.getLists(userId);
+        },
+        retry: false,
+        enabled: !!userId
+    });
+};
+
 export const useUpdateList = () => {
     return useMutation({
         mutationKey: ["updateList"],

@@ -32,8 +32,8 @@ export class ListsController {
    * @param userId - The ID of the user.
    * @returns - An array of lists.
    */
-  @Get()
-  async getLists(@Body('userId') userId: string) {
+  @Get(':userId')
+  async getLists(@Param('userId') userId: string) {
     return this.listsService.getLists(userId);
   }
 

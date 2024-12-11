@@ -1,5 +1,6 @@
 import Dexie, { Table } from "dexie";
 import { List, ListItem } from "@/types/list.types";
+import { v4 as uuidv4 } from 'uuid';
 
 type ListWithoutItems = Omit<List, 'items'>;
 
@@ -26,6 +27,11 @@ let currentDB: ShoppingListDB | null = null;
 
 export const initializeDB = (userId: string) => {
   currentDB = new ShoppingListDB(userId);
+  currentDB.serverSyncs.put({
+    id: uuidv4(),
+    listLength: 0,
+    lastSync: new Date()
+  });
   return currentDB;
 };
 

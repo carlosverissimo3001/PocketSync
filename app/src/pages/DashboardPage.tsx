@@ -11,7 +11,7 @@ import {
 } from "@/db/db-utils";
 import { ListCard } from "@/components/list/ListCard";
 import { SyncComponent } from "@/components/misc/SyncComponent";
-import { useSyncLists } from "@/hooks/useList";
+import { useLists, useSyncLists } from "@/hooks/useList";
 import { useToast } from "@/hooks/useToast";
 import { ToastAction } from "@/components/ui/toast";
 import useSubscriber from "@/hooks/useSubscriber";
@@ -19,6 +19,7 @@ import { useSync } from "@/contexts/SyncContext";
 import { useDB } from "@/contexts/DBContext";
 import { Button } from "@/components/ui/button";
 import { TOAST_MESSAGES } from "@/utils/toast-messages";
+import { LoadingOverlay } from "@/components/misc/LoadingOverlay";
 
 export const DashboardPage = () => {
   const { user } = useAuthContext();
@@ -28,7 +29,9 @@ export const DashboardPage = () => {
   const { toast } = useToast();
   const { lastSync, fetchLastSync, syncFrequency, setSyncFrequency } = useSync();
   const [isServerAlive, setIsServerAlive] = useState<boolean>(false);
-
+  const [isFirstFetch, setIsFirstFetch] = useState<boolean>(true);
+  const { data: serverLists, isLoading } = useLists(user?.id ?? '');
+ 
   // Initialize DB when user is available
   useEffect(() => {
     const init = async () => {
@@ -52,11 +55,19 @@ export const DashboardPage = () => {
   // Hook to fetch lists from local storage
   // Refetch lists when last sync time changes
   useEffect(() => {
-    const fetchData = async () => {
-      const data = await fetchListsWithItems();
-      setLists(data);
+    // 1st fetch -> server  
+    if (isFirstFetch && serverLists) {
+      setLists(serverLists);
+      setIsFirstFetch(false);
+    }
+    // Subsequent fetches -> local storage
+    else {
+      const fetchData = async () => {
+        const data = await fetchListsWithItems();
+        setLists(data);
+      }
+      fetchData();
     };
-    fetchData();
   }, [lastSync]);
 
   // Hook to sync lists with server based on frequency
@@ -162,6 +173,8 @@ export const DashboardPage = () => {
     setSyncFrequency(minutes);
   };
 
+  console.log(lists);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -177,69 +190,76 @@ export const DashboardPage = () => {
         <div className="break-inside-avoid mb-6 hover:scale-102 transition-transform flex justify-center">
           <NewListCard onAdd={createListHandler} />
         </div>
-
-        {lists.filter(list => !list.deleted).length ? (
-          <div className="mt-6">
-            <div className="flex flex-wrap justify-center gap-6">
-              {lists?.filter(list => !list.deleted).map((list) => (
-                <div
-                  key={list.id}
-                  className="break-inside-avoid hover:scale-102 transition-transform w-[400px]"
-                >
-                  <ListCard
-                    list={list}
-                    updateList={updateListHandler}
-                    handleDelete={deleteListHandler}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
+        {isLoading || !serverLists ? (
+          <LoadingOverlay />
         ) : (
-          /* No Lists */
-          <div className="mt-12 max-w-lg mx-auto text-center">
-            <div className="rounded-lg bg-white/5 p-8 shadow-lg ring-1 ring-gray-900/10 dark:ring-white/10">
-              <div className="flex justify-center">
-                <svg
-                  className="h-24 w-24 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                  />
-                </svg>
-              </div>
-              <h3 className="mt-6 text-xl font-semibold text-gray-900 dark:text-white">
-                No lists yet
-              </h3>
-              <p className="mt-2 text-gray-500 dark:text-gray-400">
-                Click the "Create new list" card above to get started! ☝️
-              </p>
-              
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-600/30"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="text-gray-400 px-4 font-medium">or</span>
+          <>
+            {Array.isArray(lists) && lists.length > 0 && lists.filter(list => !list.deleted).length > 0 ? (
+              <div className="mt-6">
+                <div className="flex flex-wrap justify-center gap-6">
+                  {lists
+                    .filter(list => list && !list.deleted)
+                    .map((list) => (
+                      <div
+                        key={list.id}
+                        className="break-inside-avoid hover:scale-102 transition-transform w-[400px]"
+                      >
+                        <ListCard
+                          list={list}
+                          updateList={updateListHandler}
+                          handleDelete={deleteListHandler}
+                        />
+                      </div>
+                    ))}
                 </div>
               </div>
+            ) : (
+              // NoLists component shown if lists is empty OR all lists are deleted
+              <div className="mt-12 max-w-lg mx-auto text-center">
+                <div className="rounded-lg bg-white/5 p-8 shadow-lg ring-1 ring-gray-900/10 dark:ring-white/10">
+                  <div className="flex justify-center">
+                    <svg
+                      className="h-24 w-24 text-gray-400 dark:text-gray-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="mt-6 text-xl font-semibold text-gray-900 dark:text-white">
+                    No lists yet
+                  </h3>
+                  <p className="mt-2 text-gray-500 dark:text-gray-400">
+                    Click the "Create new list" card above to get started! ☝️
+                  </p>
+                  
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-600/30"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="text-gray-400 px-4 font-medium">or</span>
+                    </div>
+                  </div>
 
-              <div className="mt-6 flex justify-center gap-4">
-                <Button
-                  onClick={handleSync}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  Sync with Cloud ☁️
-                </Button>
+                  <div className="mt-6 flex justify-center gap-4">
+                    <Button
+                      onClick={handleSync}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    >
+                      Sync with Cloud ☁️
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            )}
+          </>
         )}
 
         <SyncComponent
