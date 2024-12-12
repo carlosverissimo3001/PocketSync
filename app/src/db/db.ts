@@ -27,11 +27,6 @@ let currentDB: ShoppingListDB | null = null;
 
 export const initializeDB = (userId: string) => {
   currentDB = new ShoppingListDB(userId);
-  currentDB.serverSyncs.put({
-    id: uuidv4(),
-    listLength: 0,
-    lastSync: new Date()
-  });
   return currentDB;
 };
 
