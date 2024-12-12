@@ -1,10 +1,11 @@
 import { Button } from '../components/ui/button';
-import { ListCheck, LogOut, MoonIcon, SunIcon } from 'lucide-react';
+import { ListCheck, MoonIcon, SunIcon } from 'lucide-react';
 import { useDarkMode } from '@/hooks/useDarkMode';
 import { CheckListDialog } from './list/dialogs/CheckListDialog';
 import { useLocation } from 'react-router-dom';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { LogoutDialog } from './auth/LogoutDialog';
+import { SyncInfo } from './misc/SyncInfo';
 
 export const Navbar = () => {
   const { isAuthenticated } = useAuthContext();
@@ -40,12 +41,13 @@ export const Navbar = () => {
         </div>
             
         <div className="ml-auto flex items-center gap-2">
-          {isAuthenticated && (
-            <LogoutDialog />
-          )}
+           <SyncInfo />
           <Button variant="ghost" className="text-white hover:bg-gray-700" onClick={toggle}>
             {isDark ? <SunIcon /> : <MoonIcon />}
           </Button>
+          {isAuthenticated && (
+            <LogoutDialog />
+          )}
         </div>
       </div>
     </nav>

@@ -1,4 +1,4 @@
-import { RefreshCcw, Clock, ChevronUp } from "lucide-react";
+import { Clock, ChevronUp, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { xTimeAgo } from "@/utils/date";
 import { useState } from "react";
@@ -11,21 +11,18 @@ import {
 } from "@/components/ui/select";
 
 interface SyncComponentProps {
-  onClick: () => void;
-  isLoading: boolean;
   lastSync: Date | null;
   onFrequencyChange?: (minutes: number) => void;
   currentFrequency?: number; // in minutes
   isServerAlive: boolean;
 }
 
-export const SyncComponent = ({ 
-  onClick, 
-  isLoading, 
+
+export const SyncComponent = ({
   lastSync,
   onFrequencyChange,
   currentFrequency = 30,
-  isServerAlive 
+  isServerAlive,
 }: SyncComponentProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -37,7 +34,9 @@ export const SyncComponent = ({
           <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
             <div className="flex items-center gap-2 mb-2">
               <Clock className="h-3 w-3 text-gray-500 dark:text-gray-400" />
-              <span className="text-xs text-gray-700 dark:text-gray-300">Sync frequency</span>
+              <span className="text-xs text-gray-700 dark:text-gray-300">
+                Sync frequency
+              </span>
             </div>
             <Select
               value={currentFrequency.toString()}
@@ -47,12 +46,12 @@ export const SyncComponent = ({
                 <SelectValue placeholder="Select frequency" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="0">Only when I make changes</SelectItem>
                 <SelectItem value="5">Every 5 minutes</SelectItem>
                 <SelectItem value="15">Every 15 minutes</SelectItem>
                 <SelectItem value="30">Every 30 minutes</SelectItem>
                 <SelectItem value="60">Every hour</SelectItem>
                 <SelectItem value="120">Every 2 hours</SelectItem>
-                <SelectItem value="0">Manual only</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -66,9 +65,11 @@ export const SyncComponent = ({
             className="p-0.5 hover:bg-transparent"
             onClick={() => setIsExpanded(!isExpanded)}
           >
-            <ChevronUp className={`h-3 w-3 text-gray-400 transition-transform duration-300 ${
-              isExpanded ? '' : 'rotate-180'
-            }`} />
+            <ChevronUp
+              className={`h-3 w-3 text-gray-400 transition-transform duration-300 ${
+                isExpanded ? "" : "rotate-180"
+              }`}
+            />
           </Button>
 
           {/* Status Information */}
@@ -78,42 +79,20 @@ export const SyncComponent = ({
                 Last sync
               </span>
               <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">
-                {lastSync ? xTimeAgo(lastSync) : 'Never'}
+                {lastSync ? xTimeAgo(lastSync) : "Never"}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div 
+              <div
                 className={`h-1.5 w-1.5 rounded-full ${
-                  isServerAlive 
-                    ? 'bg-green-500 animate-pulse' 
-                    : 'bg-red-500'
+                  isServerAlive ? "bg-green-500 animate-pulse" : "bg-red-500"
                 }`}
               />
               <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                {isServerAlive ? 'Connected' : 'Offline'}
+                {isServerAlive ? "Connected" : "Offline"}
               </span>
             </div>
           </div>
-
-          <Button
-            onClick={onClick}
-            disabled={isLoading}
-            size="sm"
-            variant="ghost"
-            className={`
-              relative ml-auto p-1.5 rounded-md
-              ${isLoading 
-                ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' 
-                : 'hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400'
-              }
-              transition-all duration-200 ease-in-out
-            `}
-          >
-            <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            {isLoading && (
-              <span className="absolute inset-0 rounded-md animate-ping bg-indigo-200 dark:bg-indigo-700 opacity-25" />
-            )}
-          </Button>
         </div>
       </div>
     </div>
