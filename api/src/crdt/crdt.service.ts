@@ -2,9 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { BufferedChange } from '@prisma/client';
-import {
-  List as ListEntity,
-} from '@/entities';
+import { List as ListEntity } from '@/entities';
 import { ShardRouterService } from '@/sharding/shardRouter.service';
 import { PrismaClient } from '@prisma/client';
 
@@ -59,7 +57,8 @@ export class CRDTService {
     }
 
     // Get the shard-specific Prisma client based on existingListId
-    const prisma = await this.shardRouterService.getShardClientForKey(existingListId);
+    const prisma =
+      await this.shardRouterService.getShardClientForKey(existingListId);
 
     const existingList = await prisma.list.findUnique({
       where: { id: existingListId },
@@ -138,7 +137,7 @@ export class CRDTService {
     );
 
     // DB Update
-    await this.prisma.list.update({
+    await prisma.list.update({
       where: { id: existingListId },
       data: {
         items: {
@@ -224,13 +223,14 @@ export class CRDTService {
 
   async cleanupResolvedBufferChanges() {
     // Cleanup presumably can be done from any shard or a known default shard.
-    // If needed, you can loop over shards or pick a shardKey. 
-    // Here, we assume cleanup is done by userId or a specific key. 
+    // If needed, you can loop over shards or pick a shardKey.
+    // Here, we assume cleanup is done by userId or a specific key.
     // If multiple shards, you may need a different approach:
-    // For simplicity, let's say we pick a shardKey (e.g. 'cleanup-key') 
+    // For simplicity, let's say we pick a shardKey (e.g. 'cleanup-key')
     // to choose a shard. Or you could loop all shards.
 
-    const prisma = await this.shardRouterService.getShardClientForKey('cleanup-key');
+    const prisma =
+      await this.shardRouterService.getShardClientForKey('cleanup-key');
 
     const oneHourAgo = new Date();
     oneHourAgo.setHours(oneHourAgo.getHours() - 1);

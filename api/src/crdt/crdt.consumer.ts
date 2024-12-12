@@ -4,7 +4,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Job, Queue } from 'bull';
 import { ProcessBufferDto } from '@/dtos/process-buffer.dto';
 import { CRDTService } from './crdt.service';
-import { List } from '@/entities';
 import { Validate } from 'class-validator';
 import { CRDT_QUEUE, BUFFER_CLEANUP_CRON } from '@/consts/consts';
 import { ShardRouterService } from '@/sharding/shardRouter.service';
@@ -86,7 +85,7 @@ export class CRDTConsumer {
       });
 
       // Get the lists from the database
-      const lists = await this.prisma.list.findMany({
+      const lists = await prisma.list.findMany({
         where: { ownerId: userId },
         include: { items: true },
       });
