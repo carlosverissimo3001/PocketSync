@@ -49,7 +49,10 @@ export class ListsService {
    * @returns All lists for the given user.
    */
   async getLists(userId: string): Promise<List[]> {
-    return this.prisma.list.findMany({ where: { ownerId: userId } });
+    return this.prisma.list.findMany({
+      where: { ownerId: userId },
+      include: { items: true },
+    });
   }
 
   /**
