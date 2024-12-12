@@ -46,10 +46,11 @@ export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
   const [editedName, setEditedName] = useState(list.name);
   const { user } = useAuthContext();
   const allCompleted =
+    list.items?.length > 0 &&
     list.items.filter((item) => !item.deleted).every((item) => item.checked) &&
     list.items.filter((item) => !item.deleted).length > 0;
 
-  const createHandler = (item: Partial<ListItemType>) => {
+  const createItemHandler = (item: Partial<ListItemType>) => {
     const newItem: ListItemType = {
       id: uuidv4(),
       name: item.name || "",
@@ -62,7 +63,12 @@ export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
     };
     const updatedItems = [...list.items, newItem];
 
-    updateList({ ...list, items: updatedItems });
+    updateList({
+      ...list,
+      items: updatedItems,
+      updatedAt: new Date(),
+      lastEditorId: user?.id ?? "",
+    });
   };
 
   const updateItem = (action: string, itemId: string, newName?: string) => {
@@ -106,7 +112,7 @@ export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
   };
 
   const editNameHandler = (newName: string) => {
-    updateList({ ...list, name: newName });
+    updateList({ ...list, name: newName, updatedAt: new Date(), lastEditorId: user?.id ?? "" });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -147,9 +153,7 @@ export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
                       <span
                         className={`text-xl font-bold ${
                           allCompleted ? "line-through text-gray-500" : ""
-                        } ${
-                          "cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
-                        }`}
+                        } ${"cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"}`}
                         onClick={() => setIsEditing(true)}
                       >
                         {list.name}
@@ -182,9 +186,7 @@ export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 text-blue-500" />
                   </TooltipTrigger>
-                  <TooltipContent>
-                    Last edited by another user
-                  </TooltipContent>
+                  <TooltipContent>Last edited by another user</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             )}
@@ -214,7 +216,7 @@ export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
       </CardContent>
       <CardFooter className="flex justify-center">
         <div className="flex gap-2">
-          <AddItemDialog submitHandler={createHandler} />
+          <AddItemDialog submitHandler={createItemHandler} />
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive">Delete List</Button>
