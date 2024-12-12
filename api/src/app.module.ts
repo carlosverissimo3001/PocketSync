@@ -7,6 +7,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ZmqModule } from './zmq/zmq.module';
 import { BullModule } from '@nestjs/bull';
 import { CRDTModule } from './crdt/crdt.module';
+import { ShardRouterService } from './sharding/shardRouter.service';
+import { HashRing } from './sharding/hashRing';
 
 @Module({
   imports: [
