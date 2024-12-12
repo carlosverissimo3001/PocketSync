@@ -4,6 +4,8 @@ import { ZmqModule } from '@/zmq/zmq.module';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { CRDTService } from './crdt.service';
 import { CRDTConsumer } from './crdt.consumer';
+import { ShardRouterService } from '@/sharding/shardRouter.service';
+
 
 @Module({
   imports: [
@@ -17,7 +19,7 @@ import { CRDTConsumer } from './crdt.consumer';
     ZmqModule,
     PrismaModule,
   ],
-  providers: [CRDTService, CRDTConsumer],
+  providers: [CRDTService, CRDTConsumer,ShardRouterService],
   exports: [CRDTService],
 })
 export class CRDTModule {}
