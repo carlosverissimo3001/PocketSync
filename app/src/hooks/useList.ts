@@ -1,38 +1,41 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { listService } from "@/services/listService";
 import { List } from "@/types/list.types";
+import { useSync } from "@/contexts/SyncContext";
 
 export const useList = (id: string) => {
-    return useQuery({
-        queryKey: ["list", id],
-        queryFn: () => listService.getList(id),
-        retry: false,
-    });
+  return useQuery({
+    queryKey: ["list", id],
+    queryFn: () => listService.getList(id),
+    retry: false,
+  });
 };
 
-export const useLists = (userId: string) => {
-    return useQuery({
-        queryKey: ["lists", userId],
-        queryFn: async () => {
-            return listService.getLists(userId);
-        },
-        retry: false,
-        enabled: !!userId
-    });
+export const useFetchLists = (userId: string) => {
+  return useMutation({
+    mutationKey: ["fetchLists"],
+    mutationFn: () => listService.getLists(userId),
+  });
 };
 
 export const useUpdateList = () => {
-    return useMutation({
-        mutationKey: ["updateList"],
-        mutationFn: ({ list, userId }: { list: List, userId: string }) => 
-            listService.updateList(list, userId),
-    });
+  return useMutation({
+    mutationKey: ["updateList"],
+    mutationFn: ({ list, userId }: { list: List; userId: string }) =>
+      listService.updateList(list, userId),
+  });
 };
 
 export const useSyncLists = () => {
-    return useMutation({
-        mutationKey: ["syncLists"],
-        mutationFn: ({ lists, userId }: { lists: List[], userId: string }) => 
-            listService.syncLists(lists, userId),
-    });
+  const { lastSync } = useSync();
+  return useMutation({
+    mutationKey: ["syncLists"],
+    mutationFn: ({ lists, userId }: { lists: List[]; userId: string }) => {
+      // If last sync is null, there were never any syncs, so we sync all lists
+      const filteredLists = lastSync
+        ? lists.filter((list) => list.updatedAt && list.updatedAt > lastSync)
+        : lists;
+      return listService.syncLists(filteredLists, userId);
+    },
+  });
 };
