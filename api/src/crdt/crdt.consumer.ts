@@ -68,16 +68,13 @@ export class CRDTConsumer {
         {} as Record<string, typeof bufferedChanges>,
       );
 
-      const resolvedLists: List[] = [];
-
       // For each list, resolve the changes
       for (const listId in changesByList) {
-        const resolvedList = await this.crdtService.resolveChanges(
+        await this.crdtService.resolveChanges(
           changesByList[listId],
           listId,
           requesterId,
         );
-        resolvedLists.push(resolvedList);
       }
 
       // Mark the changes as resolved
@@ -86,8 +83,14 @@ export class CRDTConsumer {
         data: { resolved: true },
       });
 
+      // Get the lists from the database
+      const lists = await this.prisma.list.findMany({
+        where: { ownerId: userId },
+        include: { items: true },
+      });
+
       // Publish the resolved lists to all the client's subscribers
-      await this.zmqService.publishUserLists(userId, resolvedLists);
+      await this.zmqService.publishUserLists(userId, lists);
       this.logger.log('Successfully processed buffer for userId: ${userId}');
     } catch (error) {
       this.logger.error('Error processing buffer:', error.stack);

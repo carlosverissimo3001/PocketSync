@@ -48,7 +48,7 @@ export class CRDTService {
     incomingChanges: BufferedChange[],
     existingListId: string,
     requesterId: string,
-  ): Promise<ListEntity> {
+  ) {
     if (!incomingChanges || incomingChanges.length === 0) {
       throw new Error('No changes provided for resolution');
     }
@@ -131,6 +131,7 @@ export class CRDTService {
       });
     });
 
+    // Build the items to be upserted
     const mergedItems = Array.from(latestItemStates.values()).map(
       ({ item }) => ({
         id: item.id,
@@ -143,7 +144,8 @@ export class CRDTService {
       }),
     );
 
-    return await this.prisma.list.update({
+    // DB Update
+    await this.prisma.list.update({
       where: { id: existingListId },
       data: {
         items: {
