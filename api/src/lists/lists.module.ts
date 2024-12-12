@@ -5,6 +5,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ListsController } from './lists.controller';
 import { ListsService } from './lists.service';
+import { ShardRouterService } from '@/sharding/shardRouter.service';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { ListsService } from './lists.service';
       name: 'crdt',
     }),
   ],
-  providers: [ListsService],
+  providers: [ListsService,ShardRouterService],
   controllers: [ListsController],
   exports: [ListsService],
 })

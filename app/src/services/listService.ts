@@ -2,8 +2,8 @@ import api from '../api/axios';
 import { List, ListExtended } from '../types/list.types';
 
 export const listService = {
-  getLists: async (): Promise<List[]> => {
-    const { data } = await api.get<List[]>('/lists');
+  getLists: async (userId: string): Promise<List[]> => {
+    const { data } = await api.get<List[]>(`/lists/${userId}`);
     return data;
   },
 

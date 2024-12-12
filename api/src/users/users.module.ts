@@ -3,6 +3,7 @@ import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { JwtModule } from '@nestjs/jwt';
+import { ShardRouterService } from '@/sharding/shardRouter.service';
 
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { JwtModule } from '@nestjs/jwt';
       signOptions: { expiresIn: '1d' },
     }),
   ],
-  providers: [UsersService],
+  providers: [UsersService,ShardRouterService],
   controllers: [UsersController],
   exports: [UsersService],
 })

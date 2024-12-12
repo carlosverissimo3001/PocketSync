@@ -1,22 +1,27 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { UserEntity } from 'src/entities/user.entity';
 import { JwtService } from '@nestjs/jwt';
+import { ShardRouterService } from '@/sharding/shardRouter.service';
+
 @Injectable()
 export class UsersService {
   constructor(
-    private prisma: PrismaService,
     private jwtService: JwtService,
+    private shardRouterService: ShardRouterService,
   ) {}
+
   async login(username: string, password: string) {
-    let user = await this.prisma.user.findUnique({ where: { username } });
+    // Shard by username for user lookups
+    const prisma = await this.shardRouterService.getShardClientForKey(username);
+
+    let user = await prisma.user.findUnique({ where: { username } });
 
     // If user does not exist, create them
     if (!user) {
       const hashedPassword = await bcrypt.hash(password, 10);
-      user = await this.prisma.user.create({
+      user = await prisma.user.create({
         data: {
           username,
           password: hashedPassword,
@@ -30,12 +35,10 @@ export class UsersService {
 
     // Generate JWT token
     const token = this.generateJwt(user);
-
     return { user: this.omitPassword(user), token, isValid: true };
   }
 
   private omitPassword(user: any) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...result } = user;
     return result;
   }
@@ -52,12 +55,17 @@ export class UsersService {
   }
 
   async findUserById(id: string) {
-    return this.prisma.user.findUnique({ where: { id } });
+    // If we’re looking up by id, use id as the shard key
+    const prisma = await this.shardRouterService.getShardClientForKey(id);
+    return prisma.user.findUnique({ where: { id } });
   }
 
   async verifyToken(token: string) {
     const payload = this.jwtService.verify(token);
-    const user = await this.findUserById(payload.id);
+
+    // Shard by userId for token verification since we have the id from the token
+    const prisma = await this.shardRouterService.getShardClientForKey(payload.id);
+    const user = await prisma.user.findUnique({ where: { id: payload.id } });
 
     if (!user) {
       return { isValid: false, message: 'User not found' };

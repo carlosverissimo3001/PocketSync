@@ -1,13 +1,12 @@
-import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { BufferedChange } from '@prisma/client';
 import {
-  buildChangesToPrisma,
-  buildListToPrisma,
   List as ListEntity,
 } from '@/entities';
+import { ShardRouterService } from '@/sharding/shardRouter.service';
+import { PrismaClient } from '@prisma/client';
 
 interface ChangePayload {
   id: string;
@@ -33,15 +32,15 @@ export class CRDTService {
   private readonly logger = new Logger(CRDTService.name);
 
   constructor(
-    private prisma: PrismaService,
     @InjectQueue('crdt') private crdtQueue: Queue,
+    private shardRouterService: ShardRouterService,
   ) {}
 
   /**
    * Merge changes from the buffer into the main list
    * @param incomingChanges - The incoming changes
    * @param existingListId - The ID of the existing list
-   * @param requesterId - The ID of the requester, for tracking purposes
+   * @param requesterId - The ID of the requester
    * @returns The merged list
    */
   async resolveChanges(
@@ -59,17 +58,18 @@ export class CRDTService {
       throw new Error('Invalid or missing requester ID');
     }
 
-    const existingList = await this.prisma.list.findUnique({
+    // Get the shard-specific Prisma client based on existingListId
+    const prisma = await this.shardRouterService.getShardClientForKey(existingListId);
+
+    const existingList = await prisma.list.findUnique({
       where: { id: existingListId },
       include: { items: true },
     });
 
-    // Not yet in DB -> Shouldn't happen
     if (!existingList) {
       throw new Error(`List with ID ${existingListId} not found`);
     }
 
-    // Did any of the changes deleted the list?
     const sortedChanges = incomingChanges
       .map((change) => ({
         changes: JSON.parse(String(change.changes)) as ChangePayload,
@@ -80,9 +80,9 @@ export class CRDTService {
           new Date(a.changes.updatedAt).getTime(),
       );
 
-    // Is the latest change a deletion?
+    // If the latest change deletes the list
     if (sortedChanges[0]?.changes.deleted) {
-      return await this.prisma.list.update({
+      return await prisma.list.update({
         where: { id: existingListId },
         data: {
           deleted: true,
@@ -93,8 +93,8 @@ export class CRDTService {
       });
     }
 
-    // List was not deleted, update the metadata
-    await this.prisma.list.update({
+    // Update list metadata
+    await prisma.list.update({
       where: { id: existingListId },
       data: {
         name: sortedChanges[0].changes.name,
@@ -103,7 +103,7 @@ export class CRDTService {
       },
     });
 
-    // Item changes processing
+    // Process item changes
     const latestItemStates = new Map<
       string,
       {
@@ -112,16 +112,9 @@ export class CRDTService {
       }
     >();
 
-    // We will find the last state of each item
     sortedChanges.forEach((change) => {
       change.changes.items?.forEach((item) => {
-        // Starting from the last state (the newest)
-        // Get the existing item state
         const existingItem = latestItemStates.get(item.id);
-
-        // If the item is not in the map or the change is newer, update the map
-        // 1. Newer changes
-        // 2. The item is not in the map (meaning it's a new item)
         if (!existingItem || item.updatedAt > existingItem.item.updatedAt) {
           latestItemStates.set(item.id, {
             item,
@@ -143,7 +136,7 @@ export class CRDTService {
       }),
     );
 
-    return await this.prisma.list.update({
+    return await prisma.list.update({
       where: { id: existingListId },
       data: {
         items: {
@@ -168,8 +161,11 @@ export class CRDTService {
       throw new Error('Invalid input for buffering');
     }
 
+    // Shard by userId for buffered changes operations
+    const prisma = await this.shardRouterService.getShardClientForKey(userId);
+
     for (const list of lists) {
-      const existingList = await this.prisma.list.findUnique({
+      const existingList = await prisma.list.findUnique({
         where: { id: list.id },
       });
 
@@ -177,11 +173,7 @@ export class CRDTService {
         const data: any = {
           id: list.id,
           name: list.name,
-          owner: {
-            connect: {
-              id: list.ownerId,
-            },
-          },
+          owner: { connect: { id: list.ownerId } },
           createdAt: list.createdAt,
           updatedAt: list.updatedAt,
           deleted: list.deleted,
@@ -199,13 +191,11 @@ export class CRDTService {
 
         if (list.lastEditorId) {
           data.lastEditor = {
-            connect: {
-              id: list.lastEditorId,
-            },
+            connect: { id: list.lastEditorId },
           };
         }
 
-        await this.prisma.list.create({ data });
+        await prisma.list.create({ data });
       }
     }
 
@@ -217,7 +207,7 @@ export class CRDTService {
       resolved: false,
     }));
 
-    await this.prisma.bufferedChange.createMany({ data: changes });
+    await prisma.bufferedChange.createMany({ data: changes });
   }
 
   /**
@@ -231,10 +221,19 @@ export class CRDTService {
   }
 
   async cleanupResolvedBufferChanges() {
+    // Cleanup presumably can be done from any shard or a known default shard.
+    // If needed, you can loop over shards or pick a shardKey. 
+    // Here, we assume cleanup is done by userId or a specific key. 
+    // If multiple shards, you may need a different approach:
+    // For simplicity, let's say we pick a shardKey (e.g. 'cleanup-key') 
+    // to choose a shard. Or you could loop all shards.
+
+    const prisma = await this.shardRouterService.getShardClientForKey('cleanup-key');
+
     const oneHourAgo = new Date();
     oneHourAgo.setHours(oneHourAgo.getHours() - 1);
 
-    const result = await this.prisma.bufferedChange.deleteMany({
+    const result = await prisma.bufferedChange.deleteMany({
       where: {
         AND: [{ resolved: true }, { timestamp: { lt: oneHourAgo } }],
       },
