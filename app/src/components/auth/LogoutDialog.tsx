@@ -1,6 +1,5 @@
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -63,6 +62,7 @@ export const LogoutDialog = () => {
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
+    localStorage.removeItem(`initial-fetch`);
     try {
       await logout();
     } catch (error) {
@@ -101,11 +101,11 @@ export const LogoutDialog = () => {
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure you want to logout?</AlertDialogTitle>
-          <AlertDialogDescription className="space-y-2">
-            <p>This will erase your local lists 🚨</p>
-            <p className={`font-medium ${isSyncing ? 'text-blue-500' : ''}`}>
+          <AlertDialogDescription className="flex flex-col gap-2">
+            <span>This will erase your local lists 🚨</span>
+            <span className={`font-medium ${isSyncing ? 'text-blue-500' : ''}`}>
               {getLastSyncMessage()}
-            </p>
+            </span>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="flex-col sm:flex-row gap-2">
