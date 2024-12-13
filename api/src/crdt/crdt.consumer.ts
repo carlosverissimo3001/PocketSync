@@ -1,3 +1,14 @@
+/**
+ * CRDTConsumer
+ *
+ * This consumer class processes tasks in the CRDT queue. It handles operations such as:
+ * - Processing buffered changes for users.
+ * - Publishing resolved lists to clients.
+ * - Cleaning up resolved buffer changes.
+ *
+ * The consumer is integrated with ZMQ for publishing updates, uses Prisma for database
+ * operations, and relies on a CRDTService for resolving conflicts in data changes.
+ */
 import { ZmqService } from '@/zmq/zmq.service';
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Injectable, Logger } from '@nestjs/common';
@@ -20,7 +31,10 @@ export class CRDTConsumer {
     @InjectQueue(CRDT_QUEUE) private readonly crdtQueue: Queue,
   ) {}
 
-  // Cleans up the resolved buffer changes every hour
+  /**
+   * Schedules a recurring job to clean up resolved buffer changes.
+   * This is executed on module initialization.
+   */
   async onModuleInit() {
     await this.crdtQueue.add(
       'cleanup-buffer',
@@ -31,6 +45,12 @@ export class CRDTConsumer {
     );
   }
 
+  /**
+   * Processes the buffered changes for a user.
+   * If the buffer is empty, it fetches the lists from the database for the user.
+   *
+   * @param job - The job containing the `ProcessBufferDto` data.
+   */
   @Process('process-buffer')
   @Validate(ProcessBufferDto)
   async handleProcessBuffer(job: Job<ProcessBufferDto>) {
@@ -100,9 +120,10 @@ export class CRDTConsumer {
   }
 
   /**
-   * If the client sends no lists or there are no changes to the lists,
-   * it means that they want to fetch the lists from the server.
-   * @param userId - The ID of the user
+   * Handles an empty synchronization request from the client.
+   * This fetches the current state of the user's lists from the server.
+   *
+   * @param userId - The ID of the user requesting an empty sync.
    */
   private async handleEmptySync(userId: string): Promise<void> {
     try {
@@ -117,16 +138,25 @@ export class CRDTConsumer {
       if (lists.length === 0) {
         this.logger.warn(`No lists found for userId: ${userId}`);
       } else {
-        this.logger.log(`Publishing ${lists.length} lists for userId: ${userId}`);
+        this.logger.log(
+          `Publishing ${lists.length} lists for userId: ${userId}`,
+        );
       }
 
       await this.zmqService.publishUserLists(userId, lists);
     } catch (error) {
-      this.logger.error(`Error handling empty sync for userId: ${userId}`, error.stack);
+      this.logger.error(
+        `Error handling empty sync for userId: ${userId}`,
+        error.stack,
+      );
       throw error;
     }
   }
 
+  /**
+   * Cleans up resolved buffer changes that are older than one hour.
+   * This is triggered periodically based on a cron job.
+   */
   @Process('cleanup-buffer')
   async handleBufferCleanup() {
     this.logger.log(

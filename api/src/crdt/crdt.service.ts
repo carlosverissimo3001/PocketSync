@@ -1,3 +1,12 @@
+/**
+ * CRDTService
+ *
+ * This service provides functionality for managing and resolving changes in a
+ * Conflict-free Replicated Data Type (CRDT) system. It handles the merging of
+ * changes from a buffer into the main list, buffering new changes, checking if
+ * jobs are already queued for a user, and cleaning up resolved changes from the buffer.
+ */
+
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
@@ -6,6 +15,9 @@ import { List as ListEntity } from '@/entities';
 import { ShardRouterService } from '@/sharding/shardRouter.service';
 import { PrismaClient } from '@prisma/client';
 
+/**
+ * Interface for the payload of a change.
+ */
 interface ChangePayload {
   id: string;
   name: string;
@@ -34,11 +46,12 @@ export class CRDTService {
   ) {}
 
   /**
-   * Merge changes from the buffer into the main list
-   * @param incomingChanges - The incoming changes
-   * @param existingListId - The ID of the existing list
-   * @param requesterId - The ID of the requester
-   * @returns The merged list
+   * Resolves changes from the buffer and merges them into the main list.
+   * @param incomingChanges - Array of buffered changes to be resolved.
+   * @param existingListId - ID of the list to merge the changes into.
+   * @param requesterId - ID of the user requesting the merge.
+   * @returns The updated list after merging the changes.
+   * @throws Error if inputs are invalid or the list does not exist.
    */
   async resolveChanges(
     incomingChanges: BufferedChange[],
@@ -152,9 +165,10 @@ export class CRDTService {
   }
 
   /**
-   * Buffer changes in the database
-   * @param userId - The ID of the user
-   * @param lists - The lists to be buffered
+   * Buffers changes in the database.
+   * @param userId - ID of the user whose changes are being buffered.
+   * @param lists - Array of lists to buffer.
+   * @throws Error if inputs are invalid.
    */
   async addToBuffer(userId: string, lists: ListEntity[]) {
     if (!userId || !lists || lists.length === 0) {
@@ -211,15 +225,19 @@ export class CRDTService {
   }
 
   /**
-   * Checks if there is already a job queued for the user
-   * @param userId - The ID of the user
-   * @returns Whether there is a job queued for the user
+   * Checks if there is already a queued job for a specific user.
+   * @param userId - ID of the user to check.
+   * @returns A boolean indicating whether a job is already queued.
    */
   async isJobAlreadyQueuedForUser(userId: string): Promise<boolean> {
     const jobs = await this.crdtQueue.getJobs(['waiting', 'active', 'delayed']);
     return jobs.some((job) => job.data.userId === userId);
   }
 
+  /**
+   * Cleans up resolved changes from the buffer that are older than one hour.
+   * @returns The number of resolved buffer changes that were cleaned up.
+   */
   async cleanupResolvedBufferChanges() {
     // Cleanup presumably can be done from any shard or a known default shard.
     // If needed, you can loop over shards or pick a shardKey.
