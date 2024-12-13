@@ -20,7 +20,7 @@ export class ShardRouterService implements OnModuleInit {
     for (const shard of shards) {
       this.hashRing.addShard(shard);
       this.shardClients[shard.name] = new PrismaClient({
-        datasources: { db: { url: shard.connectionUrl } }
+        datasources: { db: { url: shard.connectionUrl } },
       });
     }
   }

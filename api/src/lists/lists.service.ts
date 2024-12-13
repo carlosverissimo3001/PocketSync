@@ -64,7 +64,11 @@ export class ListsService {
       throw new NotFoundException(`List with ID ${id} not found`);
     }
 
-    const owner = await prisma.user.findUnique({
+    const ownerPrisma = await this.shardRouterService.getShardClientForKey(
+      list.ownerId,
+    );
+
+    const owner = await ownerPrisma.user.findUnique({
       where: { id: list.ownerId },
       select: {
         username: true,

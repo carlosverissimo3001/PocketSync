@@ -10,15 +10,14 @@ interface ChangePayload {
   id: string;
   name: string;
   deleted: boolean;
-  deletedAt: string | null;
   updatedAt: string;
+  lastEditorId: string;
   items: Array<{
     id: string;
     name: string;
     quantity: number;
     checked: boolean;
     deleted: boolean;
-    deletedAt: string | null;
     updatedAt: string;
     listId: string;
     lastEditorId: string;
@@ -98,7 +97,7 @@ export class CRDTService {
       data: {
         name: sortedChanges[0].changes.name,
         updatedAt: sortedChanges[0].changes.updatedAt,
-        lastEditorId: requesterId,
+        lastEditorId: sortedChanges[0].changes.lastEditorId,
       },
     });
 
@@ -132,7 +131,7 @@ export class CRDTService {
         checked: item.checked,
         deleted: item.deleted,
         updatedAt: item.updatedAt,
-        lastEditorId: requesterId,
+        lastEditorId: item.lastEditorId,
       }),
     );
 

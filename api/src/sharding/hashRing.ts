@@ -46,7 +46,10 @@ export class HashRing {
       }
     }
 
-    const pos = (start === this.sortedKeys.length) ? this.sortedKeys[0] : this.sortedKeys[start];
+    const pos =
+      start === this.sortedKeys.length
+        ? this.sortedKeys[0]
+        : this.sortedKeys[start];
     return this.ring.get(pos)!;
   }
 }
