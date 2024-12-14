@@ -114,7 +114,8 @@ export class CRDTConsumer {
       await this.zmqService.publishUserLists(userId, lists);
       this.logger.log('Successfully processed buffer for userId: ${userId}');
     } catch (error) {
-      this.logger.error('Error processing buffer:', error.stack);
+      const err = error as Error;
+      this.logger.error('Error processing buffer:', err.stack);
       throw error;
     }
   }
@@ -145,9 +146,10 @@ export class CRDTConsumer {
 
       await this.zmqService.publishUserLists(userId, lists);
     } catch (error) {
+      const err = error as Error;
       this.logger.error(
         `Error handling empty sync for userId: ${userId}`,
-        error.stack,
+        err.stack,
       );
       throw error;
     }

@@ -1,17 +1,27 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CRDTConsumer } from './crdt.consumer';
 import { CRDTService } from './crdt.service';
-import { PrismaService } from '@/prisma/prisma.service';
 import { ZmqService } from '@/zmq/zmq.service';
 import { Job } from 'bull';
+import { ShardRouterService } from '@/sharding/shardRouter.service';
 
 describe('CRDTConsumer', () => {
   let consumer: CRDTConsumer;
   let crdtService: CRDTService;
-  let prismaService: PrismaService;
   let zmqService: ZmqService;
+  let mockPrismaClient: any;
 
   beforeEach(async () => {
+    mockPrismaClient = {
+      bufferedChange: {
+        findMany: jest.fn(),
+        updateMany: jest.fn(),
+      },
+      list: {
+        findMany: jest.fn(),
+      },
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CRDTConsumer,
@@ -20,37 +30,36 @@ describe('CRDTConsumer', () => {
           useValue: { resolveChanges: jest.fn() },
         },
         {
-          provide: PrismaService,
+          provide: ShardRouterService,
           useValue: {
-            bufferedChange: {
-              findMany: jest.fn(),
-              updateMany: jest.fn(),
-            },
-            list: { findMany: jest.fn() },
+            getShardClientForKey: jest.fn().mockResolvedValue(mockPrismaClient),
           },
         },
         {
           provide: ZmqService,
           useValue: { publishUserLists: jest.fn() },
         },
+        {
+          provide: 'BullQueue_crdt',
+          useValue: { add: jest.fn() },
+        },
       ],
     }).compile();
 
     consumer = module.get<CRDTConsumer>(CRDTConsumer);
     crdtService = module.get<CRDTService>(CRDTService);
-    prismaService = module.get<PrismaService>(PrismaService);
     zmqService = module.get<ZmqService>(ZmqService);
   });
 
   describe('handleProcessBuffer', () => {
     it('should handle empty sync correctly', async () => {
       const job = { data: { isEmptySync: true, userId: '123' } } as Job;
-      jest.spyOn(prismaService.list, 'findMany').mockResolvedValue([]);
+      mockPrismaClient.list.findMany.mockResolvedValue([]);
       jest.spyOn(zmqService, 'publishUserLists').mockResolvedValue();
 
       await consumer.handleProcessBuffer(job);
 
-      expect(prismaService.list.findMany).toHaveBeenCalledWith({
+      expect(mockPrismaClient.list.findMany).toHaveBeenCalledWith({
         where: { ownerId: '123' },
         include: { items: true },
       });
@@ -62,7 +71,7 @@ describe('CRDTConsumer', () => {
         data: { isEmptySync: false, userId: '123', requesterId: '456' },
       } as Job;
 
-      jest.spyOn(prismaService.bufferedChange, 'findMany').mockResolvedValue([
+      mockPrismaClient.bufferedChange.findMany.mockResolvedValue([
         {
           id: '1',
           userId: '123',
@@ -76,14 +85,16 @@ describe('CRDTConsumer', () => {
       jest
         .spyOn(crdtService, 'resolveChanges')
         .mockResolvedValue({ id: 'list1' } as any);
-      jest
-        .spyOn(prismaService.bufferedChange, 'updateMany')
-        .mockResolvedValue({ count: 1 });
+      mockPrismaClient.bufferedChange.updateMany.mockResolvedValue({
+        count: 1,
+      });
+      // Add this mock for the final list fetch
+      mockPrismaClient.list.findMany.mockResolvedValue([{ id: 'list1' }]);
       jest.spyOn(zmqService, 'publishUserLists').mockResolvedValue();
 
       await consumer.handleProcessBuffer(job);
 
-      expect(prismaService.bufferedChange.findMany).toHaveBeenCalledWith({
+      expect(mockPrismaClient.bufferedChange.findMany).toHaveBeenCalledWith({
         where: { userId: '123', resolved: false },
         orderBy: { timestamp: 'asc' },
       });
@@ -100,9 +111,9 @@ describe('CRDTConsumer', () => {
           },
         ],
         'list1',
-        '456',
+        '123',
       );
-      expect(prismaService.bufferedChange.updateMany).toHaveBeenCalledWith({
+      expect(mockPrismaClient.bufferedChange.updateMany).toHaveBeenCalledWith({
         where: { id: { in: ['1'] } },
         data: { resolved: true },
       });
@@ -115,9 +126,9 @@ describe('CRDTConsumer', () => {
       const job = {
         data: { isEmptySync: false, userId: '123', requesterId: '456' },
       } as Job;
-      jest
-        .spyOn(prismaService.bufferedChange, 'findMany')
-        .mockRejectedValue(new Error('DB Error'));
+      mockPrismaClient.bufferedChange.findMany.mockRejectedValue(
+        new Error('DB Error'),
+      );
 
       await expect(consumer.handleProcessBuffer(job)).rejects.toThrow(
         'DB Error',
@@ -127,14 +138,12 @@ describe('CRDTConsumer', () => {
 
   describe('handleEmptySync', () => {
     it('should handle empty sync with lists', async () => {
-      jest
-        .spyOn(prismaService.list, 'findMany')
-        .mockResolvedValue([{ id: '1' } as any]);
+      mockPrismaClient.list.findMany.mockResolvedValue([{ id: '1' } as any]);
       jest.spyOn(zmqService, 'publishUserLists').mockResolvedValue();
 
       await consumer['handleEmptySync']('123');
 
-      expect(prismaService.list.findMany).toHaveBeenCalledWith({
+      expect(mockPrismaClient.list.findMany).toHaveBeenCalledWith({
         where: { ownerId: '123' },
         include: { items: true },
       });
@@ -144,12 +153,12 @@ describe('CRDTConsumer', () => {
     });
 
     it('should handle empty sync with no lists', async () => {
-      jest.spyOn(prismaService.list, 'findMany').mockResolvedValue([]);
+      mockPrismaClient.list.findMany.mockResolvedValue([]);
       jest.spyOn(zmqService, 'publishUserLists').mockResolvedValue();
 
       await consumer['handleEmptySync']('123');
 
-      expect(prismaService.list.findMany).toHaveBeenCalledWith({
+      expect(mockPrismaClient.list.findMany).toHaveBeenCalledWith({
         where: { ownerId: '123' },
         include: { items: true },
       });
