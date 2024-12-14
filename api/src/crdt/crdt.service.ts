@@ -10,10 +10,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { BufferedChange } from '@prisma/client';
+import { BufferedChange, PrismaClient } from '@prisma/client';
 import { List as ListEntity } from '@/entities';
 import { ShardRouterService } from '@/sharding/shardRouter.service';
-import { PrismaClient } from '@prisma/client';
 
 /**
  * Interface for the payload of a change.
@@ -23,7 +22,7 @@ interface ChangePayload {
   name: string;
   deleted: boolean;
   updatedAt: string;
-  lastEditorId: string;
+  lastEditorUsername: string;
   items: Array<{
     id: string;
     name: string;
@@ -32,7 +31,7 @@ interface ChangePayload {
     deleted: boolean;
     updatedAt: string;
     listId: string;
-    lastEditorId: string;
+    lastEditorUsername: string;
   }>;
 }
 
@@ -49,14 +48,14 @@ export class CRDTService {
    * Resolves changes from the buffer and merges them into the main list.
    * @param incomingChanges - Array of buffered changes to be resolved.
    * @param existingListId - ID of the list to merge the changes into.
-   * @param requesterId - ID of the user requesting the merge.
+   * @param userId - ID of the user who we're handling the changes for.
    * @returns The updated list after merging the changes.
    * @throws Error if inputs are invalid or the list does not exist.
    */
   async resolveChanges(
     incomingChanges: BufferedChange[],
     existingListId: string,
-    requesterId: string,
+    userId: string,
   ) {
     if (!incomingChanges || incomingChanges.length === 0) {
       throw new Error('No changes provided for resolution');
@@ -64,21 +63,31 @@ export class CRDTService {
     if (!existingListId) {
       throw new Error('Invalid or missing list ID');
     }
-    if (!requesterId) {
-      throw new Error('Invalid or missing requester ID');
+
+    if (!userId) {
+      throw new Error('Invalid or missing user ID');
     }
 
-    // Get the shard-specific Prisma client based on existingListId
-    const prisma =
+    // Get the shard-specific Prisma client based on userid, if we don't have
+    // the list yet, it will be in the same shard as the user.
+
+    let prisma =
       await this.shardRouterService.getShardClientForKey(existingListId);
+    if (!prisma) {
+      prisma = await this.shardRouterService.getShardClientForKey(userId);
+    }
 
     const existingList = await prisma.list.findUnique({
       where: { id: existingListId },
-      include: { items: true },
+      include: { items: true, owner: true },
     });
 
+    // !! This can happen, if this is a new list that has not been synced yet.
+    // So, log instead of throwing an error.
     if (!existingList) {
-      throw new Error(`List with ID ${existingListId} not found`);
+      this.logger.log(
+        `List with ID ${existingListId} not found. This is a new list that has not been synced yet.`,
+      );
     }
 
     const sortedChanges = incomingChanges
@@ -93,24 +102,41 @@ export class CRDTService {
 
     // If the latest change deletes the list
     if (sortedChanges[0]?.changes.deleted) {
-      return await prisma.list.update({
+      return await prisma.list.upsert({
         where: { id: existingListId },
-        data: {
+        create: {
+          id: existingListId,
+          name: sortedChanges[0].changes.name,
           deleted: true,
           updatedAt: sortedChanges[0].changes.updatedAt,
-          lastEditorId: requesterId,
+          lastEditorUsername: sortedChanges[0].changes.lastEditorUsername,
+          ownerId: userId,
+        },
+        update: {
+          deleted: true,
+          updatedAt: sortedChanges[0].changes.updatedAt,
+          lastEditorUsername: sortedChanges[0].changes.lastEditorUsername,
         },
         include: { items: true },
       });
     }
 
-    // Update list metadata
-    await prisma.list.update({
+    // Update/Create list metadata
+    await prisma.list.upsert({
       where: { id: existingListId },
-      data: {
+      create: {
+        id: existingListId,
         name: sortedChanges[0].changes.name,
         updatedAt: sortedChanges[0].changes.updatedAt,
-        lastEditorId: sortedChanges[0].changes.lastEditorId,
+        // Safe to use the lastEditorId on the create case, since we know that
+        // the requester/editor is the owner of the list.
+        owner: { connect: { id: userId } },
+        lastEditorUsername: sortedChanges[0].changes.lastEditorUsername,
+      },
+      update: {
+        name: await this.getLatestNameChange(sortedChanges, existingList),
+        updatedAt: sortedChanges[0].changes.updatedAt,
+        lastEditorUsername: sortedChanges[0].changes.lastEditorUsername,
       },
     });
 
@@ -144,7 +170,7 @@ export class CRDTService {
         checked: item.checked,
         deleted: item.deleted,
         updatedAt: item.updatedAt,
-        lastEditorId: item.lastEditorId,
+        lastEditorUsername: item.lastEditorUsername,
       }),
     );
 
@@ -203,10 +229,8 @@ export class CRDTService {
           },
         };
 
-        if (list.lastEditorId) {
-          data.lastEditor = {
-            connect: { id: list.lastEditorId },
-          };
+        if (list.lastEditorUsername) {
+          data.lastEditorUsername = list.lastEditorUsername;
         }
 
         await prisma.list.create({ data });
@@ -259,5 +283,44 @@ export class CRDTService {
     });
 
     return { count: result.count };
+  }
+
+  /**
+   * Gets the latest name change from the buffered changes.
+   * @param changes - Array of changes.
+   * @param list - The original list to get the latest name change for.
+   * @returns The latest name change.
+   */
+  async getLatestNameChange(
+    changes: { changes: ChangePayload }[],
+    list: ListEntity,
+  ): Promise<string> {
+    // If the list is not yet found, i.e, new list, then its just the last change
+    if (!list) {
+      return changes[0].changes.name;
+    }
+
+    const { name: listName } = list;
+
+    // Do we have any change for which the name has changed?
+    const nameChange = changes.filter((change) => {
+      return change.changes.name !== listName;
+    });
+
+    // Wasn't modified
+    if (nameChange.length === 0) {
+      return list.name;
+    }
+
+    // Find the latest name change
+    const latestNameChange = nameChange.sort((a, b) => {
+      return (
+        // Need to do this, because it's not a Date object rather a string
+        new Date(b.changes.updatedAt).getTime() -
+        new Date(a.changes.updatedAt).getTime()
+      );
+    })[0];
+
+    return latestNameChange.changes.name;
   }
 }

@@ -11,8 +11,4 @@ export class ProcessBufferDto {
   @ApiProperty({ description: 'The owner of the lists' })
   @IsString({ message: 'userId must be a string' })
   userId: string;
-
-  @ApiProperty({ description: 'The requester of the lists' })
-  @IsString({ message: 'requesterId must be a string' })
-  requesterId: string;
 }

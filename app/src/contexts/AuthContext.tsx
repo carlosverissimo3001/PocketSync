@@ -18,7 +18,10 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState<string | null>(() => {
@@ -35,28 +38,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      try {
-        const response = await authApi.verifyToken(storedToken);
+      const response = await authApi.verifyToken(storedToken);
+      
+      if (response) {
+        // Server responded
         const { isValid, user } = response as AuthResponse;
-        
         if (isValid) {
-          setUser(user);
-          setToken(storedToken);
+          handleSetUser(user);
+          handleSetToken(storedToken);
         } else {
-          setUser(null);
-          setToken(null);
-          localStorage.removeItem('token');
-          sessionStorage.removeItem('token');
+          handleSetUser(null);
+          handleSetToken('');
         }
-      } catch (error) {
-        setUser(null);
-        setToken(null);
-        localStorage.removeItem('token');
-        sessionStorage.removeItem('token');
-      } finally {
-        setIsInitialized(true);
-        setIsLoading(false);
       }
+      // Server is down - do nothing, keep existing state from storage
+      
+      setIsInitialized(true);
+      setIsLoading(false);
     };
 
     verifyAuth();
@@ -67,14 +65,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('token', newToken);
     } else {
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('user');
     }
-    setToken(newToken);
+  };
+
+  const handleSetUser = (newUser: User | null) => {
+    if (newUser) {
+      localStorage.setItem('user', JSON.stringify(newUser));
+    } else {
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('user');
+    }
+    setUser(newUser);
   };
 
   const value = {
     user,
     token,
-    setUser,
+    setUser: handleSetUser,
     setToken: handleSetToken,
     isAuthenticated: !!user && !!token,
     isInitialized,

@@ -32,7 +32,7 @@ export class ListsController {
    * @param userId - The ID of the user.
    * @returns - An array of lists.
    */
-  @Get(':userId')
+  @Get('user/:userId')
   async getLists(@Param('userId') userId: string) {
     return this.listsService.getLists(userId);
   }

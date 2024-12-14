@@ -55,7 +55,7 @@ export class CRDTConsumer {
   @Validate(ProcessBufferDto)
   async handleProcessBuffer(job: Job<ProcessBufferDto>) {
     try {
-      const { isEmptySync, userId, requesterId } = job.data;
+      const { isEmptySync, userId } = job.data;
 
       if (isEmptySync) {
         this.logger.log(`Handling empty sync for userId: ${userId}`);
@@ -94,7 +94,7 @@ export class CRDTConsumer {
         await this.crdtService.resolveChanges(
           changesByList[listId],
           listId,
-          requesterId,
+          userId,
         );
       }
 

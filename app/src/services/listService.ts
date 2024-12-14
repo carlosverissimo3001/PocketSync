@@ -1,9 +1,9 @@
-import api from '../api/axios';
-import { List, ListExtended } from '../types/list.types';
+import api from "../api/axios";
+import { List, ListExtended } from "../types/list.types";
 
 export const listService = {
-  getLists: async (userId: string): Promise<List[]> => {
-    const { data } = await api.get<List[]>(`/lists/${userId}`);
+  getListsForUser: async (userId: string): Promise<List[]> => {
+    const { data } = await api.get<List[]>(`/lists/user/${userId}`);
     return data;
   },
 
@@ -16,10 +16,10 @@ export const listService = {
     // Won't return anything,
     // The BE will handle the conflicts
     // and then use ZMQ to notify the client using PUB/SUB
-    await api.post('/lists/', { lists, userId });
+    await api.post("/lists/", { lists, userId });
   },
 
   updateList: async (list: List, userId: string): Promise<void> => {
     await api.post(`/lists/update`, { lists: [list], userId });
   },
-};      
+};

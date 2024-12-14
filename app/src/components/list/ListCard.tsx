@@ -11,7 +11,7 @@ import { formatDateToMMMDDYYYY } from "@/utils/date";
 import { ListItem } from "./ListItem";
 import { AddItemDialog } from "./dialogs/AddItemDialog";
 import { v4 as uuidv4 } from "uuid";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "../ui/input";
 import {
   Tooltip,
@@ -50,6 +50,10 @@ export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
     list.items.filter((item) => !item.deleted).every((item) => item.checked) &&
     list.items.filter((item) => !item.deleted).length > 0;
 
+  useEffect(() => {
+    setEditedName(list.name);
+  }, [list.name]);
+
   const createItemHandler = (item: Partial<ListItemType>) => {
     const newItem: ListItemType = {
       id: uuidv4(),
@@ -59,7 +63,7 @@ export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
       createdAt: new Date(),
       updatedAt: new Date(),
       listId: list.id,
-      lastEditorId: user?.id ?? "",
+      lastEditorUsername: user?.username ?? "",
     };
     const updatedItems = [...list.items, newItem];
 
@@ -67,7 +71,7 @@ export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
       ...list,
       items: updatedItems,
       updatedAt: new Date(),
-      lastEditorId: user?.id ?? "",
+      lastEditorUsername: user?.username ?? "",
     });
   };
 
@@ -80,7 +84,7 @@ export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
         const updatedItem = {
           ...item,
           updatedAt: new Date(),
-          lastEditorId: user?.id ?? "",
+          lastEditorUsername: user?.username ?? "",
         };
 
         switch (action) {
@@ -107,12 +111,12 @@ export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
       ...list,
       items: updatedItems,
       updatedAt: new Date(),
-      lastEditorId: user?.id ?? "",
+      lastEditorUsername: user?.username ?? "",
     });
   };
 
   const editNameHandler = (newName: string) => {
-    updateList({ ...list, name: newName, updatedAt: new Date(), lastEditorId: user?.id ?? "" });
+    updateList({ ...list, name: newName, updatedAt: new Date(), lastEditorUsername: user?.username ?? "" });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -180,13 +184,18 @@ export const ListCard = ({ list, updateList, handleDelete }: ListCardProps) => {
             <span className="text-sm text-gray-500 dark:text-gray-400">
               {list.createdAt ? formatDateToMMMDDYYYY(list.createdAt) : "N/A"}
             </span>
-            {list.lastEditorId && list.lastEditorId !== user?.id && (
+            {list.lastEditorUsername !== user?.username && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 text-blue-500" />
                   </TooltipTrigger>
-                  <TooltipContent>Last edited by another user</TooltipContent>
+                  <TooltipContent className="flex items-center gap-2 bg-gradient-to-r from-blue-500/90 to-purple-500/90 text-white border-none px-4 py-2.5 rounded-lg shadow-lg">
+                    <span className="font-medium">Last edited by</span>
+                    <span className="font-bold bg-white/20 px-2 py-0.5 rounded-md">
+                      {list.lastEditorUsername}
+                    </span>
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             )}

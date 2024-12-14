@@ -12,7 +12,7 @@ export class ListsService {
   constructor(
     private crdtService: CRDTService,
     @InjectQueue('crdt') private crdtQueue: Queue,
-    private shardRouterService: ShardRouterService, // Inject ShardRouterService
+    private shardRouterService: ShardRouterService,
   ) {}
 
   async enqueueListChanges(data: SyncListsDto) {
@@ -30,7 +30,7 @@ export class ListsService {
 
     await this.crdtQueue.add(
       'process-buffer',
-      { userId, requesterId, isEmptySync },
+      { userId, isEmptySync },
       JOB_SETTINGS,
     );
   }

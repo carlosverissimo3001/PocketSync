@@ -9,7 +9,7 @@ export class List {
   items: ListItem[];
   updatedAt: Date;
   deleted: boolean;
-  lastEditorId?: string;
+  lastEditorUsername?: string;
 }
 
 export const buildSampleList = (userId: string): Prisma.ListCreateInput => ({
@@ -29,7 +29,7 @@ export const buildListToPrisma = (list: List): Prisma.ListCreateInput => ({
   createdAt: list.createdAt,
   updatedAt: list.updatedAt,
   deleted: list.deleted ?? false,
-  lastEditor: { connect: { id: list.lastEditorId } },
+  lastEditorUsername: list.lastEditorUsername,
   items: {
     create: list.items.map((item) => buildListItemToPrisma(item)),
   },
@@ -43,7 +43,7 @@ export const buildListItemToPrisma = (item: ListItem) => ({
   createdAt: item.createdAt,
   updatedAt: item.updatedAt,
   deleted: item.deleted ?? false,
-  lastEditor: { connect: { id: item.lastEditorId } },
+  lastEditorUsername: item.lastEditorUsername,
 });
 
 export const buildChangesToPrisma = (
@@ -55,7 +55,7 @@ export const buildChangesToPrisma = (
 
   return {
     name: listData.name,
-    lastEditor: { connect: { id: requesterId } },
+    lastEditorUsername: requesterId,
     updatedAt: listData.updatedAt,
     deleted: listData.deleted ?? false,
     items: {

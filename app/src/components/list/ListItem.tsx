@@ -2,7 +2,7 @@ import { MinusIcon, PlusIcon, TrashIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { ListItem as ListItemType } from "@/types/list.types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "../ui/input";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "../ui/tooltip";
 
@@ -15,6 +15,10 @@ type ListItemProps = {
 export const ListItem = ({ item, updateItem, allowChange }: ListItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(item.name);
+
+  useEffect(() => {
+    setEditedName(item.name);
+  }, [item.name]);
 
   const handleCheck = (checked: boolean) => {
     updateItem(checked ? "toggleChecked" : "toggleUnchecked", item.id);

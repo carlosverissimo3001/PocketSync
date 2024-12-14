@@ -20,8 +20,6 @@ model User {
   password        String
   createdAt       DateTime         @default(now()) @map("created_at")
   lists           List[]
-  editedLists     List[]           @relation("LastEditor")
-  editedItems     ListItem[]       @relation("LastEditor")
   bufferedChanges BufferedChange[]
 }
 
@@ -34,8 +32,7 @@ model List {
   updatedAt       DateTime         @map("updated_at")
   items           ListItem[]
   deleted         Boolean          @default(false)
-  lastEditorId    String?          @map("last_editor_id")
-  lastEditor      User?            @relation("LastEditor", fields: [lastEditorId], references: [id])
+  lastEditorUsername String?
   bufferedChanges BufferedChange[]
 }
 
@@ -50,8 +47,7 @@ model ListItem {
   createdAt    DateTime  @default(now()) @map("created_at")
   deleted      Boolean   @default(false)
   // Different items from the same list can have different last editors, this is good for tracking changes
-  lastEditorId String?   @map("last_editor_id")
-  lastEditor   User?     @relation("LastEditor", fields: [lastEditorId], references: [id])
+  lastEditorUsername String?
 }
 
 model BufferedChange {

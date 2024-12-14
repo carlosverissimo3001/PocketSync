@@ -1,7 +1,7 @@
 import { useAuthContext } from "@/contexts/AuthContext";
 import { List } from "@/types/list.types";
 import { v4 as uuidv4 } from "uuid";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { NewListCard } from "@/components/list/NewListCard";
 import {
   fetchListsWithItems,
@@ -20,6 +20,7 @@ import { useDB } from "@/contexts/DBContext";
 import { Button } from "@/components/ui/button";
 import { LoadingOverlay } from "@/components/misc/LoadingOverlay";
 import { SYNC_SUCCESS } from "@/utils/toast-messages";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 export const DashboardPage = () => {
   const { user } = useAuthContext();
   const { initializeUserDB } = useDB();
@@ -27,7 +28,9 @@ export const DashboardPage = () => {
   const { mutate: syncLists } = useSyncLists();
   const { toast } = useToast();
   const { lastSync, fetchLastSync, syncFrequency, setSyncFrequency, updateLastSync } = useSync();
-  const [isServerAlive, setIsServerAlive] = useState<boolean>(false);
+  // Wishful thinking, but we'll assume the server is always alive :fingers-crossed:
+  const isServerAliveRef = useRef<boolean>(true);
+  const [isServerAlive, setIsServerAlive] = useState<boolean>(true);
   const [isDirty, setIsDirty] = useState(false);
   const { mutate: fetchLists, isPending } = useFetchLists(user?.id ?? '');
 
@@ -35,8 +38,8 @@ export const DashboardPage = () => {
     if (user?.id) {
       fetchLists(undefined, {
         onSuccess: (serverLists) => {
-          handleListInsertions(serverLists, updateLastSync);1
-          toast(SYNC_SUCCESS(serverLists.length));
+          handleListInsertions(serverLists, updateLastSync);
+          toast(SYNC_SUCCESS(serverLists.filter(list => !list.deleted).length));
         }
       });
     }
@@ -102,9 +105,34 @@ export const DashboardPage = () => {
     const checkServerHealth = async () => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/`);
-        setIsServerAlive(response.ok);
+        if(!isServerAliveRef.current) {
+          toast({
+            title: "Server is back online 🟢",
+            description: "Your data will be sent to the cloud soon!",
+            duration: 3000,
+          });
+          isServerAliveRef.current = response.ok;
+          setIsServerAlive(response.ok);
+
+          // Set an immediate sync
+          const fetchLatestLists = async () => {
+            const latestLists = await fetchListsWithItems();
+            syncLists({ lists: latestLists, userId: user?.id ?? '' });
+          };
+          
+          fetchLatestLists();
+        }
       } catch (error) {
-        setIsServerAlive(false);
+        if(isServerAliveRef.current) {
+          toast({
+            title: "Server is not responding 🚨🚨",
+            description: "But don't worry, your data is still safe locally!",
+            variant: "destructive",
+            duration: 3000,
+          });
+          isServerAliveRef.current = false;
+          setIsServerAlive(false);
+        }
         console.error(error);
       }
     };
@@ -113,10 +141,10 @@ export const DashboardPage = () => {
     checkServerHealth();
 
     // Set up interval
-    const interval = setInterval(checkServerHealth, 30000); // 30 seconds
+    const interval = setInterval(checkServerHealth, 5000); // 5 seconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [toast]);
 
   const createListHandler = async (listName: string) => {
     const newList: List = {
@@ -125,8 +153,9 @@ export const DashboardPage = () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       ownerId: user?.id ?? "",
+      deleted: false,
       items: [],
-      lastEditorId: user?.id ?? "",
+      lastEditorUsername: user?.username ?? "",
     };
 
     await createList(newList);
@@ -235,12 +264,22 @@ export const DashboardPage = () => {
               </div>
 
               <div className="mt-6 flex justify-center gap-4">
-                <Button
-                  onClick={handleSync}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  Fetch from Cloud ☁️
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Button
+                        onClick={handleSync}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        disabled={isPending || !isServerAlive}
+                      >
+                        Fetch from Cloud ☁️
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Apologies, the server is down right now. Your data is still safe locally.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
           </div>

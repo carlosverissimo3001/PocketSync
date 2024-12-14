@@ -25,7 +25,12 @@ export const authApi = {
   },
 
   verifyToken: async (token: string) => {
-    const response = await api.post('/login/verify-token', { token });
-    return response.data;
+    try {
+      const response = await api.post('/login/verify-token', { token });
+      return response.data;
+    } catch (error) {
+      console.error(error);
+      return null;
+    }
   },
 }; 

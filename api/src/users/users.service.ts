@@ -17,7 +17,6 @@ export class UsersService {
     const prisma = await this.shardRouterService.getShardClientForKey(username);
 
     let user = await prisma.user.findUnique({ where: { username } });
-
     // If user does not exist, create them
     if (!user) {
       const hashedPassword = await bcrypt.hash(password, 10);

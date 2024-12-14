@@ -20,8 +20,14 @@ export const useAuth = () => {
       const response = await authApi.login(params);
       const { token, user } = response as AuthResponse;
 
-      setUser(user);
-      setToken(token);
+      await Promise.all([
+        new Promise<void>(resolve => {
+          setUser(user);
+          setToken(token);
+          localStorage.setItem('sync-frequency', '0');
+          setTimeout(resolve, 50);
+        })
+      ]);
 
       navigate("/dashboard");
     } catch (err) {
@@ -37,6 +43,7 @@ export const useAuth = () => {
     await closeUserDB();
     setUser(null);
     setToken("");
+    localStorage.removeItem('sync-frequency');
     navigate("/login");
   };
 

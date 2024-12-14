@@ -14,7 +14,7 @@ export const useList = (id: string) => {
 export const useFetchLists = (userId: string) => {
   return useMutation({
     mutationKey: ["fetchLists"],
-    mutationFn: () => listService.getLists(userId),
+    mutationFn: () => listService.getListsForUser(userId),
   });
 };
 

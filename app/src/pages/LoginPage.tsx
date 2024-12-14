@@ -4,9 +4,9 @@ import { useAuthContext } from "../contexts/AuthContext";
 import { LoadingOverlay } from "../components/misc/LoadingOverlay";
 
 export const LoginPage = () => {
-  const { user, token, isInitialized } = useAuthContext();
+  const { user, token, isInitialized, isLoading } = useAuthContext();
 
-  if (!isInitialized) {
+  if (!isInitialized || isLoading) {
     return <LoadingOverlay />;
   }
 

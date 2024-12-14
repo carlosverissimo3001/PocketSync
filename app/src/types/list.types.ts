@@ -8,7 +8,7 @@ export interface List {
     items: ListItem[];
     updatedAt?: Date;
     deleted?: boolean;
-    lastEditorId: string;
+    lastEditorUsername?: string;
 }
 
 export interface ListExtended extends List {
@@ -24,5 +24,5 @@ export interface ListItem {
     createdAt?: Date;
     updatedAt?: Date;
     deleted?: boolean;
-    lastEditorId: string;
+    lastEditorUsername?: string;
 }

@@ -54,10 +54,14 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
       createdAt: new Date(),
       updatedAt: new Date(),
       listId: list.id,
-      lastEditorId: user?.id ?? "",
+      lastEditorUsername: user?.username ?? "",
     };
 
-    const updatedList = { ...list, items: [...list.items, newItem] };
+    const updatedList = {
+      ...list,
+      lastEditorUsername: user?.username ?? "",
+      items: [...list.items, newItem],
+    };
     setList(updatedList);
     saveToServer(updatedList);
   };
@@ -112,9 +116,14 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
 
     const updatedList = {
       ...list,
+      lastEditorUsername: user?.username ?? "",
       items: updatedItems.map((item) =>
         item.id === itemId
-          ? { ...item, lastEditorId: user?.id ?? "", updatedAt: new Date() }
+          ? {
+              ...item,
+              lastEditorUsername: user?.username ?? "",
+              updatedAt: new Date(),
+            }
           : item
       ),
     };
@@ -137,7 +146,7 @@ export const ListCardSingle = ({ list: initialList }: ListCardProps) => {
       ...list, 
       name: newName, 
       updatedAt: new Date(), 
-      lastEditorId: user?.id ?? "" 
+      lastEditorUsername: user?.username ?? "" 
     };
     setList(updatedList);
     saveToServer(updatedList);
