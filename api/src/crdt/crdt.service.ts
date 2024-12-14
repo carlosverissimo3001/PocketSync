@@ -10,10 +10,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
-import { BufferedChange, PrismaClient } from '@prisma/client';
+import { BufferedChange } from '@prisma/client';
 import { List as ListEntity } from '@/entities';
 import { ShardRouterService } from '@/sharding/shardRouter.service';
-
+import { UsersService } from '@/users/users.service';
 /**
  * Interface for the payload of a change.
  */
@@ -42,6 +42,7 @@ export class CRDTService {
   constructor(
     @InjectQueue('crdt') private crdtQueue: Queue,
     private shardRouterService: ShardRouterService,
+    private usersService: UsersService,
   ) {}
 
   /**
@@ -63,31 +64,19 @@ export class CRDTService {
     if (!existingListId) {
       throw new Error('Invalid or missing list ID');
     }
-
     if (!userId) {
       throw new Error('Invalid or missing user ID');
     }
 
-    // Get the shard-specific Prisma client based on userid, if we don't have
-    // the list yet, it will be in the same shard as the user.
-
-    let prisma =
-      await this.shardRouterService.getShardClientForKey(existingListId);
-    if (!prisma) {
-      prisma = await this.shardRouterService.getShardClientForKey(userId);
-    }
+    const prisma = await this.shardRouterService.getShardClientForKey(userId);
 
     const existingList = await prisma.list.findUnique({
       where: { id: existingListId },
       include: { items: true, owner: true },
     });
 
-    // !! This can happen, if this is a new list that has not been synced yet.
-    // So, log instead of throwing an error.
     if (!existingList) {
-      this.logger.log(
-        `List with ID ${existingListId} not found. This is a new list that has not been synced yet.`,
-      );
+      throw new Error(`List with ID ${existingListId} not found`);
     }
 
     const sortedChanges = incomingChanges
@@ -201,7 +190,7 @@ export class CRDTService {
       throw new Error('Invalid input for buffering');
     }
 
-    // Shard by userId for buffered changes operations
+    // Use user ID for sharding
     const prisma = await this.shardRouterService.getShardClientForKey(userId);
 
     for (const list of lists) {
@@ -217,6 +206,7 @@ export class CRDTService {
           createdAt: list.createdAt,
           updatedAt: list.updatedAt,
           deleted: list.deleted,
+          lastEditorUsername: list.lastEditorUsername,
           items: {
             create: list.items.map((item) => ({
               id: item.id,
@@ -228,10 +218,6 @@ export class CRDTService {
             })),
           },
         };
-
-        if (list.lastEditorUsername) {
-          data.lastEditorUsername = list.lastEditorUsername;
-        }
 
         await prisma.list.create({ data });
       }
@@ -262,27 +248,27 @@ export class CRDTService {
    * Cleans up resolved changes from the buffer that are older than one hour.
    * @returns The number of resolved buffer changes that were cleaned up.
    */
-  async cleanupResolvedBufferChanges() {
-    // Cleanup presumably can be done from any shard or a known default shard.
-    // If needed, you can loop over shards or pick a shardKey.
-    // Here, we assume cleanup is done by userId or a specific key.
-    // If multiple shards, you may need a different approach:
-    // For simplicity, let's say we pick a shardKey (e.g. 'cleanup-key')
-    // to choose a shard. Or you could loop all shards.
-
-    const prisma =
-      await this.shardRouterService.getShardClientForKey('cleanup-key');
-
+  async cleanupResolvedBufferChanges(): Promise<{ count: number }> {
+    const shards = await this.shardRouterService.getAllShardClients();
     const oneHourAgo = new Date();
     oneHourAgo.setHours(oneHourAgo.getHours() - 1);
 
-    const result = await prisma.bufferedChange.deleteMany({
-      where: {
-        AND: [{ resolved: true }, { timestamp: { lt: oneHourAgo } }],
-      },
-    });
+    let totalCount = 0;
 
-    return { count: result.count };
+    for (const prisma of shards) {
+      const result = await prisma.bufferedChange.deleteMany({
+        where: {
+          AND: [
+            { resolved: true },
+            { timestamp: { lt: oneHourAgo } }
+          ],
+        },
+      });
+
+      totalCount += result.count;
+    }
+
+    return { count: totalCount };
   }
 
   /**

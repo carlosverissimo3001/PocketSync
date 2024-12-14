@@ -19,7 +19,8 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "strict": true
   },
-  "include": ["src", "../bridge/server.js", "src/crdt/crdt.consumer.spec.ts"]
+  "include": ["src", "../bridge/server.js", "src/crdt/crdt.consumer.spec.ts", "jest.config.ts"]
 }

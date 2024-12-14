@@ -13,7 +13,7 @@ import { ShardRouterService } from '@/sharding/shardRouter.service';
       signOptions: { expiresIn: '1d' },
     }),
   ],
-  providers: [UsersService,ShardRouterService],
+  providers: [UsersService, ShardRouterService],
   controllers: [UsersController],
   exports: [UsersService],
 })

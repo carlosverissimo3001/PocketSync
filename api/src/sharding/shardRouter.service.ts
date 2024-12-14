@@ -29,4 +29,12 @@ export class ShardRouterService implements OnModuleInit {
     const shard = this.hashRing.getShardForKey(key);
     return this.shardClients[shard.name];
   }
+
+  public async getAllShardClients(): Promise<PrismaClient[]> {
+    return Object.values(this.shardClients);
+  }
+
+  public async findByIndex(index: number): Promise<PrismaClient> {
+    return this.shardClients[index];
+  }
 }

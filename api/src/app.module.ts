@@ -7,9 +7,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ZmqModule } from './zmq/zmq.module';
 import { BullModule } from '@nestjs/bull';
 import { CRDTModule } from './crdt/crdt.module';
-import { ShardRouterService } from './sharding/shardRouter.service';
-import { HashRing } from './sharding/hashRing';
-
+import { CacheModule } from '@nestjs/cache-manager';
 @Module({
   imports: [
     BullModule.forRoot({
@@ -18,6 +16,11 @@ import { HashRing } from './sharding/hashRing';
         port: parseInt(process.env.REDIS_PORT || '6379'),
         password: process.env.REDIS_PASSWORD,
       },
+    }),
+    CacheModule.register({
+      isGlobal: true,
+      ttl: 60 * 60 * 1000,
+      max: 100,
     }),
     CRDTModule,
     UsersModule,
