@@ -22,6 +22,11 @@ SDLE Second Assignment of group T2-G16.
 
 - Please make sure you have npm installed. Visit [nodejs.org](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) to download and install it.
 
+> [!Note] 
+> Please refer to [this folder](https://drive.google.com/drive/folders/1VoiujRZF0um9QeXkzaruPY6qaiNhCme6?usp=drive_link) to acess the environment variables. Use your institution email(`g.uporto.pt`) to access the folder.
+> You will find two `.env` files, one for the API and one for the app. They should be in the root folder of the respective folder (e.g. `src/api/.env` and `src/app/.env`).
+
+
 ## Run the Backend
 
 1. Move into the `api` folder
