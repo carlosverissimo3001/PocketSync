@@ -2,7 +2,9 @@
 $shardUrls = @(
     $env:SHARD_A_URL,
     $env:SHARD_B_URL,
-    $env:SHARD_C_URL
+    $env:SHARD_C_URL,
+    $env:SHARD_D_URL,
+    $env:SHARD_E_URL
 )
 
 foreach ($url in $shardUrls) {

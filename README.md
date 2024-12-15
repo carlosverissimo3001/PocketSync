@@ -41,13 +41,21 @@ npm install -g yarn
 ```sh
 yarn
 ```
-
+<!--
 5. Apply prisma migrations and generate the Prisma client
 
 ```sh
 yarn prisma migrate dev
 yarn prisma generate
 ```
+-->
+
+5. Apply prisma shards migrations and generate the shards Prisma client (script for windows shell)
+
+```sh
+.\migrate_shards.ps1
+```
+
 
 6. Start the server
 
@@ -94,6 +102,11 @@ npm install
 ```sh
 npm start
 ```
+
+## User Credentials
+- test_user
+- E3%hjEzN@WULHM
+<!-- when hashed -> $2a$10$vtRM/PazBJuy9T1rws.sy.6gg8uXLvro1QSL8tulWon8.Da5Ad/.W -->
 
 ## Prisma
 
