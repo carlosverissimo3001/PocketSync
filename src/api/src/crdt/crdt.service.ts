@@ -72,123 +72,120 @@ export class CRDTService {
     const shardKey = `list:${existingListId}`;
 
     // Write operations with quorum
-    await this.shardRouterService.writeWithQuorum(
-      shardKey,
-      async (prisma) => {
-        const shard = this.shardRouterService.getShardForUser(userId);
-        const existingList = await prisma.list.findUnique({
-          where: { id: existingListId },
-          include: { items: true },
-        });
+    await this.shardRouterService.writeWithQuorum(shardKey, async (prisma) => {
+      const shard = this.shardRouterService.getShardForUser(userId);
+      const existingList = await prisma.list.findUnique({
+        where: { id: existingListId },
+        include: { items: true },
+      });
 
-        if (!existingList) {
-          throw new Error(
-            `List with ID ${existingListId} not found in shard ${shard.name}`,
-          );
-        }
+      if (!existingList) {
+        throw new Error(
+          `List with ID ${existingListId} not found in shard ${shard.name}`,
+        );
+      }
 
-        const sortedChanges = incomingChanges
-          .map((change) => ({
-            changes: JSON.parse(String(change.changes)) as ChangePayload,
-          }))
-          .sort(
-            (a, b) =>
-              new Date(b.changes.updatedAt).getTime() -
-              new Date(a.changes.updatedAt).getTime(),
-          );
+      const sortedChanges = incomingChanges
+        .map((change) => ({
+          changes: JSON.parse(String(change.changes)) as ChangePayload,
+        }))
+        .sort(
+          (a, b) =>
+            new Date(b.changes.updatedAt).getTime() -
+            new Date(a.changes.updatedAt).getTime(),
+        );
 
-        // If the latest change deletes the list
-        if (sortedChanges[0]?.changes.deleted) {
-          await prisma.list.upsert({
-            where: { id: existingListId },
-            create: {
-              id: existingListId,
-              name: sortedChanges[0].changes.name,
-              deleted: true,
-              updatedAt: sortedChanges[0].changes.updatedAt,
-              lastEditorUsername: sortedChanges[0].changes.lastEditorUsername,
-              ownerId: userId,
-            },
-            update: {
-              deleted: true,
-              updatedAt: sortedChanges[0].changes.updatedAt,
-              lastEditorUsername: sortedChanges[0].changes.lastEditorUsername,
-            },
-            include: { items: true },
-          });
-          return;
-        }
-
-        // Update/Create list metadata
+      // If the latest change deletes the list
+      if (sortedChanges[0]?.changes.deleted) {
         await prisma.list.upsert({
           where: { id: existingListId },
           create: {
             id: existingListId,
             name: sortedChanges[0].changes.name,
+            deleted: true,
             updatedAt: sortedChanges[0].changes.updatedAt,
-            owner: { connect: { id: userId } },
             lastEditorUsername: sortedChanges[0].changes.lastEditorUsername,
+            ownerId: userId,
           },
           update: {
-            name: await this.getLatestNameChange(sortedChanges, existingList),
+            deleted: true,
             updatedAt: sortedChanges[0].changes.updatedAt,
             lastEditorUsername: sortedChanges[0].changes.lastEditorUsername,
-          },
-        });
-
-        // Process item changes
-        const latestItemStates = new Map<
-          string,
-          {
-            item: ChangePayload['items'][0];
-            lastUpdatedAt: Date;
-          }
-        >();
-
-        sortedChanges.forEach((change) => {
-          change.changes.items?.forEach((item) => {
-            const existingItem = latestItemStates.get(item.id);
-            if (
-              !existingItem ||
-              new Date(item.updatedAt) > existingItem.lastUpdatedAt
-            ) {
-              latestItemStates.set(item.id, {
-                item,
-                lastUpdatedAt: new Date(item.updatedAt),
-              });
-            }
-          });
-        });
-
-        // Build the items to be upserted
-        const mergedItems = Array.from(latestItemStates.values()).map(
-          ({ item }) => ({
-            id: item.id,
-            name: item.name,
-            quantity: item.quantity,
-            checked: item.checked,
-            deleted: item.deleted,
-            updatedAt: item.updatedAt,
-            lastEditorUsername: item.lastEditorUsername,
-          }),
-        );
-
-        // DB Update
-        await prisma.list.update({
-          where: { id: existingListId },
-          data: {
-            items: {
-              upsert: mergedItems.map((item) => ({
-                where: { id: item.id },
-                create: item,
-                update: item,
-              })),
-            },
           },
           include: { items: true },
         });
-      },
-    );
+        return;
+      }
+
+      // Update/Create list metadata
+      await prisma.list.upsert({
+        where: { id: existingListId },
+        create: {
+          id: existingListId,
+          name: sortedChanges[0].changes.name,
+          updatedAt: sortedChanges[0].changes.updatedAt,
+          owner: { connect: { id: userId } },
+          lastEditorUsername: sortedChanges[0].changes.lastEditorUsername,
+        },
+        update: {
+          name: await this.getLatestNameChange(sortedChanges, existingList),
+          updatedAt: sortedChanges[0].changes.updatedAt,
+          lastEditorUsername: sortedChanges[0].changes.lastEditorUsername,
+        },
+      });
+
+      // Process item changes
+      const latestItemStates = new Map<
+        string,
+        {
+          item: ChangePayload['items'][0];
+          lastUpdatedAt: Date;
+        }
+      >();
+
+      sortedChanges.forEach((change) => {
+        change.changes.items?.forEach((item) => {
+          const existingItem = latestItemStates.get(item.id);
+          if (
+            !existingItem ||
+            new Date(item.updatedAt) > existingItem.lastUpdatedAt
+          ) {
+            latestItemStates.set(item.id, {
+              item,
+              lastUpdatedAt: new Date(item.updatedAt),
+            });
+          }
+        });
+      });
+
+      // Build the items to be upserted
+      const mergedItems = Array.from(latestItemStates.values()).map(
+        ({ item }) => ({
+          id: item.id,
+          name: item.name,
+          quantity: item.quantity,
+          checked: item.checked,
+          deleted: item.deleted,
+          updatedAt: item.updatedAt,
+          lastEditorUsername: item.lastEditorUsername,
+        }),
+      );
+
+      // DB Update
+      await prisma.list.update({
+        where: { id: existingListId },
+        data: {
+          items: {
+            upsert: mergedItems.map((item) => ({
+              where: { id: item.id },
+              create: item,
+              update: item,
+            })),
+          },
+        },
+        include: { items: true },
+      });
+    });
 
     this.logger.log(
       `Resolved and replicated ${incomingChanges.length} changes for listId: ${existingListId} across shards.`,
@@ -209,24 +206,23 @@ export class CRDTService {
     const shardKey = `buffer:${userId}`;
 
     // Write buffered changes with quorum
-    await this.shardRouterService.writeWithQuorum(
-      shardKey,
-      async (prisma) => {
-        // Determine the shards for replication
-        const shards = this.shardRouterService.getShardsForKey(`buffer:${userId}`);
+    await this.shardRouterService.writeWithQuorum(shardKey, async (prisma) => {
+      // Determine the shards for replication
+      const shards = this.shardRouterService.getShardsForKey(
+        `buffer:${userId}`,
+      );
 
-        // Prepare buffered changes
-        const changes = lists.map((list) => ({
-          userId,
-          listId: list.id,
-          changes: JSON.stringify(list),
-          timestamp: new Date(),
-          resolved: false,
-        }));
+      // Prepare buffered changes
+      const changes = lists.map((list) => ({
+        userId,
+        listId: list.id,
+        changes: JSON.stringify(list),
+        timestamp: new Date(),
+        resolved: false,
+      }));
 
-        await prisma.bufferedChange.createMany({ data: changes });
-      },
-    );
+      await prisma.bufferedChange.createMany({ data: changes });
+    });
 
     this.logger.log(
       `Buffered ${lists.length} changes for user '${userId}' across shards with quorum.`,
@@ -253,26 +249,23 @@ export class CRDTService {
     // Write cleanup operation with quorum
     let totalCount = 0;
 
-    await this.shardRouterService.writeWithQuorum(
-      shardKey,
-      async (prisma) => {
-        const oneHourAgo = new Date();
-        oneHourAgo.setHours(oneHourAgo.getHours() - 1);
+    await this.shardRouterService.writeWithQuorum(shardKey, async (prisma) => {
+      const oneHourAgo = new Date();
+      oneHourAgo.setHours(oneHourAgo.getHours() - 1);
 
-        for (const prismaClient of await this.shardRouterService.getAllShardClients()) {
-          const result = await prismaClient.bufferedChange.deleteMany({
-            where: {
-              AND: [{ resolved: true }, { timestamp: { lt: oneHourAgo } }],
-            },
-          });
+      for (const prismaClient of await this.shardRouterService.getAllShardClients()) {
+        const result = await prismaClient.bufferedChange.deleteMany({
+          where: {
+            AND: [{ resolved: true }, { timestamp: { lt: oneHourAgo } }],
+          },
+        });
 
-          totalCount += result.count;
-          this.logger.log(
-            `Cleaned up ${result.count} resolved changes in shard '${prismaClient}'.`,
-          );
-        }
-      },
-    );
+        totalCount += result.count;
+        this.logger.log(
+          `Cleaned up ${result.count} resolved changes in shard '${prismaClient}'.`,
+        );
+      }
+    });
 
     this.logger.log(
       `Cleaned up a total of ${totalCount} resolved buffer changes across shards.`,
