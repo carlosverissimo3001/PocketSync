@@ -9,6 +9,7 @@ import { useDarkMode } from './hooks/useDarkMode'
 import { ListViewPage } from './pages/ListViewPage'
 import { Toaster } from './components/ui/toaster'
 import { DBProvider } from './contexts/DBContext'
+import { RegisterPage } from './pages/RegisterPage'
     
 function App() {
   const location = useLocation();
@@ -34,6 +35,7 @@ function App() {
               />
               <Route path="/dashboard/list/:id" element={<ListViewPage />} />
               <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/register" element={<RegisterPage />} />
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </main>

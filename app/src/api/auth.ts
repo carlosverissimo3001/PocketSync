@@ -25,6 +25,15 @@ export const authApi = {
     }
   },
 
+  register: async (credentials: LoginCredentials) => {
+    try {
+      const response = await api.post('/register', credentials);
+      return response.data;
+    } catch (error: any) {
+      throw new AuthError('An error occurred while registering.');
+    }
+  },
+
   verifyToken: async (token: string) => {
     try {
       const response = await api.post('/login/verify-token', { token });

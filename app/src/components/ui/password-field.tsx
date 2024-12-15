@@ -1,4 +1,4 @@
-import { EyeOffIcon, EyeIcon, EyeClosedIcon } from "lucide-react";
+import { EyeIcon, EyeClosedIcon } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Box } from "./box";
 import {
@@ -16,10 +16,12 @@ type PasswordFieldProps = {
   name?: string;
   placeholder?: string;
   description?: string | JSX.Element;
+  title?: string;
 };
 
 export function PasswordField({
   name = "password",
+  title = "Password",
   description,
 }: PasswordFieldProps) {
   const { control, getFieldState } = useFormContext();
@@ -31,7 +33,7 @@ export function PasswordField({
       name={name}
       render={({ field }) => (
           <FormItem>
-          <FormLabel>Password</FormLabel>
+          <FormLabel>{title}</FormLabel>
           <FormControl>
             <Box className="relative">
               <Input

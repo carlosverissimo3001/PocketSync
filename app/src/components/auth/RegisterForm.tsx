@@ -24,22 +24,23 @@ const formSchema = z.object({
     message: "Username must be at least 2 characters.",
   }),
   password: passwordSchema,
-  rememberMe: z.boolean().optional(),
+  confirmPassword: passwordSchema,
 });
 
-export function LoginForm() {
-  const { login, isLoading, error } = useAuth();
+export const RegisterForm = () => {
+  const { register, isLoading, error } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: "",
       password: "",
+      confirmPassword: "",
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    await login(values);
+    await register(values);
   }
 
   return (
@@ -68,13 +69,17 @@ export function LoginForm() {
             </FormItem>
           )}
         />
+        {/* Password Field */}
         <PasswordField />
+
+        {/* Confirm Password Field */}
+        <PasswordField title="Confirm Password" name="confirmPassword" />
 
         <div className="flex justify-center mt-8">
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-32 bg-slate-600 hover:bg-slate-700 text-white font-medium py-5 rounded-lg transition-all duration-200 shadow-lg hover:shadow-slate-600/20 disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-32 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-5 rounded-lg transition-all duration-200 shadow-lg hover:shadow-indigo-600/20 disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <div className="flex items-center justify-center gap-2">
@@ -82,11 +87,11 @@ export function LoginForm() {
                 <span>Wait...</span>
               </div>
             ) : (
-              "Login"
+              "Register"
             )}
           </Button>
         </div>
       </form>
     </Form>
   );
-}
+};

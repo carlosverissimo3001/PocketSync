@@ -6,12 +6,13 @@ export interface LoginCredentials {
 export interface AuthResponse {
     token: string;
     user: User;
-    isValid: boolean;
+    isValid?: boolean;
 }
   
 export interface User {
     id: string;
     username: string;
+    createdAt?: Date;
 }
   
 export interface AuthState {
