@@ -20,18 +20,25 @@ export const useAuth = () => {
       const response = await authApi.login(params);
       const { token, user } = response as AuthResponse;
 
-      await Promise.all([
-        new Promise<void>(resolve => {
-          setUser(user);
-          setToken(token);
-          localStorage.setItem('sync-frequency', '0');
-          setTimeout(resolve, 50);
-        })
-      ]);
+      // updates the local storage
+      localStorage.setItem('token', token);
+      localStorage.setItem('sync-frequency', '0');
+
+      // updates the context
+      setUser(user);
+      setToken(token);
 
       navigate("/dashboard");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Login failed";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
+    console.log('Login Error:', {
+        error: err,
+        response: err.response,
+        data: err.response?.data,
+        message: err.response?.data?.message
+      });
+      const message =
+        err.response?.data?.message || 'An error occurred during login';
       setError(message);
       throw err;
     } finally {

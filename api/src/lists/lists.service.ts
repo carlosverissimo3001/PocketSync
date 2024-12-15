@@ -59,17 +59,24 @@ export class ListsService {
     try {
       // Determine the shard for the user and retrieve the PrismaClient
       const shard = this.shardRouterService.getShardForUser(userId);
-      const prisma: PrismaClient = this.shardRouterService.getPrismaClient(shard.name);
+      const prisma: PrismaClient = this.shardRouterService.getPrismaClient(
+        shard.name,
+      );
 
       const lists = await prisma.list.findMany({
         where: { ownerId: userId },
         include: { items: true },
       });
 
-      this.logger.log(`Retrieved ${lists.length} lists for userId: ${userId} from shard: ${shard.name}`);
+      this.logger.log(
+        `Retrieved ${lists.length} lists for userId: ${userId} from shard: ${shard.name}`,
+      );
       return lists;
     } catch (error) {
-      this.logger.error(`Error retrieving lists for userId: ${userId}`, (error as Error).stack);
+      this.logger.error(
+        `Error retrieving lists for userId: ${userId}`,
+        (error as Error).stack,
+      );
       throw error;
     }
   }
@@ -87,7 +94,9 @@ export class ListsService {
       );
       if (cachedShardName) {
         const prisma = this.shardRouterService.getPrismaClient(cachedShardName);
-        this.logger.log(`Retrieved shard '${cachedShardName}' for listId: ${listId} from cache.`);
+        this.logger.log(
+          `Retrieved shard '${cachedShardName}' for listId: ${listId} from cache.`,
+        );
         return prisma;
       }
 
@@ -97,8 +106,14 @@ export class ListsService {
         const list = await prisma.list.findUnique({ where: { id: listId } });
         if (list) {
           // Cache the shard name for this list ID
-          await this.cacheManager.set(`list:${listId}`, shardName, 60 * 60 * 1000); // Cache for 1 hour
-          this.logger.log(`Found listId: ${listId} in shard: ${shardName} and cached it.`);
+          await this.cacheManager.set(
+            `list:${listId}`,
+            shardName,
+            60 * 60 * 1000,
+          ); // Cache for 1 hour
+          this.logger.log(
+            `Found listId: ${listId} in shard: ${shardName} and cached it.`,
+          );
           return prisma;
         }
       }
@@ -106,7 +121,10 @@ export class ListsService {
       this.logger.warn(`List with ID ${listId} not found in any shard.`);
       return null;
     } catch (error) {
-      this.logger.error(`Error finding shard for listId: ${listId}`, (error as Error).stack);
+      this.logger.error(
+        `Error finding shard for listId: ${listId}`,
+        (error as Error).stack,
+      );
       throw error;
     }
   }
@@ -140,19 +158,25 @@ export class ListsService {
       });
 
       if (!owner) {
-        this.logger.warn(`Owner with ID ${list.ownerId} not found for listId: ${id}`);
+        this.logger.warn(
+          `Owner with ID ${list.ownerId} not found for listId: ${id}`,
+        );
         return { ...list, owner: { username: 'Unknown' } };
       }
 
-      this.logger.log(`Retrieved listId: ${id} with owner: ${owner.username} from shard.`);
+      this.logger.log(
+        `Retrieved listId: ${id} with owner: ${owner.username} from shard.`,
+      );
       return { ...list, owner };
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      this.logger.error(`Error retrieving list with ID: ${id}`, (error as Error).stack);
+      this.logger.error(
+        `Error retrieving list with ID: ${id}`,
+        (error as Error).stack,
+      );
       throw error;
     }
   }
-
 }

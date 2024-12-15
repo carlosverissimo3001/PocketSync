@@ -39,6 +39,9 @@ describe('CRDTService', () => {
           provide: ShardRouterService,
           useValue: {
             getShardClientForKey: jest.fn().mockResolvedValue(mockPrismaClient),
+            getShardForUser: jest.fn().mockResolvedValue({
+              name: 'shard1',
+            }),
           },
         },
         {

@@ -1,6 +1,11 @@
 // src/sharding/shardRouter.service.ts
 
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { HashRing } from './hashRing'; // Ensure this is correctly implemented
 import { Queue } from 'bull';
@@ -8,7 +13,6 @@ import { InjectQueue } from '@nestjs/bull';
 import { Inject } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-
 
 interface ShardInfo {
   name: string;
@@ -32,19 +36,21 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit() {
-    this.hashRing = new HashRing(100); // Assuming 100 virtual nodes
+    this.hashRing = new HashRing(100);
 
     // Define shards from environment
     const shards: ShardInfo[] = [
       { name: 'shard-a', connectionUrl: process.env.SHARD_A_URL },
       { name: 'shard-b', connectionUrl: process.env.SHARD_B_URL },
       { name: 'shard-c', connectionUrl: process.env.SHARD_C_URL },
-      { name: 'shard-d', connectionUrl: process.env.SHARD_D_URL }, // Added shard-d
+      { name: 'shard-d', connectionUrl: process.env.SHARD_D_URL },
     ];
 
     for (const shard of shards) {
       if (!shard.connectionUrl) {
-        this.logger.error(`Connection URL for ${shard.name} is not defined in environment variables.`);
+        this.logger.error(
+          `Connection URL for ${shard.name} is not defined in environment variables.`,
+        );
         continue;
       }
 
@@ -57,9 +63,13 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
 
       try {
         await prisma.$connect();
-        this.logger.log(`Successfully connected to ${shard.name} at ${shard.connectionUrl}`);
+        this.logger.log(
+          `Successfully connected to ${shard.name} at ${shard.connectionUrl}`,
+        );
       } catch (error) {
-        this.logger.error(`Failed to connect to ${shard.name} at ${shard.connectionUrl}: ${(error as Error).message}`);
+        this.logger.error(
+          `Failed to connect to ${shard.name} at ${shard.connectionUrl}: ${(error as Error).message}`,
+        );
       }
     }
   }
@@ -68,9 +78,13 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
     for (const [shardName, client] of Object.entries(this.shardClients)) {
       try {
         await client.$disconnect();
-        this.logger.log(`PrismaClient for shard ${shardName} disconnected successfully.`);
+        this.logger.log(
+          `PrismaClient for shard ${shardName} disconnected successfully.`,
+        );
       } catch (error) {
-        this.logger.error(`Error disconnecting PrismaClient for shard ${shardName}: ${(error as Error).message}`);
+        this.logger.error(
+          `Error disconnecting PrismaClient for shard ${shardName}: ${(error as Error).message}`,
+        );
       }
     }
   }
@@ -138,12 +152,19 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
     this.hashRing.removeShard(shardName);
     const prisma = this.shardClients[shardName];
     if (prisma) {
-      prisma.$disconnect().then(() => {
-        delete this.shardClients[shardName];
-        this.logger.warn(`Shard ${shardName} removed from the ring and PrismaClient disconnected.`);
-      }).catch((error) => {
-        this.logger.error(`Error disconnecting PrismaClient for shard ${shardName}: ${(error as Error).message}`);
-      });
+      prisma
+        .$disconnect()
+        .then(() => {
+          delete this.shardClients[shardName];
+          this.logger.warn(
+            `Shard ${shardName} removed from the ring and PrismaClient disconnected.`,
+          );
+        })
+        .catch((error) => {
+          this.logger.error(
+            `Error disconnecting PrismaClient for shard ${shardName}: ${(error as Error).message}`,
+          );
+        });
     } else {
       this.logger.warn(`Shard ${shardName} not found among connected shards.`);
     }
@@ -168,9 +189,13 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
 
     try {
       await prisma.$connect();
-      this.logger.log(`Successfully connected to new shard ${shard.name} at ${shard.connectionUrl}`);
+      this.logger.log(
+        `Successfully connected to new shard ${shard.name} at ${shard.connectionUrl}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to connect to new shard ${shard.name} at ${shard.connectionUrl}: ${(error as Error).message}`);
+      this.logger.error(
+        `Failed to connect to new shard ${shard.name} at ${shard.connectionUrl}: ${(error as Error).message}`,
+      );
       delete this.shardClients[shard.name];
       throw error;
     }
@@ -192,11 +217,13 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
    */
   private selectFallbackShard(failedShardName: string): ShardInfo | null {
     const allShards = Object.values(this.shardClients);
-    const sortedShardKeys = this.hashRing.getSortedKeys(); // Assuming HashRing has getSortedKeys
-    const ring = this.hashRing.getRing(); // Assuming HashRing has getRing
+    const sortedShardKeys = this.hashRing.getSortedKeys();
+    const ring = this.hashRing.getRing();
 
     // Find all virtual nodes for the failed shard
-    const virtualNodes = sortedShardKeys.filter((pos) => ring.get(pos)?.name === failedShardName);
+    const virtualNodes = sortedShardKeys.filter(
+      (pos) => ring.get(pos)?.name === failedShardName,
+    );
 
     if (virtualNodes.length === 0) {
       this.logger.warn(`No virtual nodes found for shard ${failedShardName}`);
@@ -216,7 +243,9 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
       fallbackIndex = (fallbackIndex + 1) % sortedShardKeys.length;
     }
 
-    this.logger.warn(`No suitable fallback shard found for failed shard ${failedShardName}`);
+    this.logger.warn(
+      `No suitable fallback shard found for failed shard ${failedShardName}`,
+    );
     return null;
   }
 }

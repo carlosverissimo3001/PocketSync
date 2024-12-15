@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { useAuth } from "@/hooks/useAuth"
-
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -30,7 +30,7 @@ const formSchema = z.object({
 
 
 export function LoginForm() {
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, error } = useAuth();
 
   // Defines the form with Zod validation
   const form = useForm<z.infer<typeof formSchema>>({
@@ -53,6 +53,11 @@ export function LoginForm() {
   return (
     <Form {...form}>
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+    {error && ( 
+      <Alert variant="destructive">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    )}
         <FormField
         control={form.control}
         name="username"

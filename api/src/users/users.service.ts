@@ -1,6 +1,11 @@
 // src/users/users.service.ts
 
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { UserEntity } from 'src/entities/user.entity';
@@ -64,7 +69,7 @@ export class UsersService {
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
           this.logger.warn(`Invalid password attempt for user '${username}'`);
-          return null;
+          throw new UnauthorizedException('Invalid username or password');
         }
       }
 
@@ -80,7 +85,12 @@ export class UsersService {
       const token = this.generateJwt(user);
       return { user: this.omitPassword(user), token, isValid: true };
     } catch (error) {
-      this.logger.error(`Error during login for username '${username}': ${(error as Error).message}`);
+      if (error instanceof UnauthorizedException) {
+        throw error; // Re-throw authentication errors
+      }
+      this.logger.error(
+        `Error during login for username '${username}': ${(error as Error).message}`,
+      );
       throw error;
     }
   }
@@ -94,17 +104,25 @@ export class UsersService {
     try {
       // Determine the shard for the user based on userId
       const shard = this.shardRouterService.getShardForUser(id);
-      const prisma: PrismaClient = this.shardRouterService.getPrismaClient(shard.name);
+      const prisma: PrismaClient = this.shardRouterService.getPrismaClient(
+        shard.name,
+      );
 
       const user = await prisma.user.findUnique({ where: { id } });
       if (user) {
-        this.logger.log(`Retrieved user '${user.username}' from shard '${shard.name}'`);
+        this.logger.log(
+          `Retrieved user '${user.username}' from shard '${shard.name}'`,
+        );
       } else {
-        this.logger.warn(`User with ID '${id}' not found in shard '${shard.name}'`);
+        this.logger.warn(
+          `User with ID '${id}' not found in shard '${shard.name}'`,
+        );
       }
       return user;
     } catch (error) {
-      this.logger.error(`Error finding user by ID '${id}': ${(error as Error).message}`);
+      this.logger.error(
+        `Error finding user by ID '${id}': ${(error as Error).message}`,
+      );
       throw error;
     }
   }
@@ -120,14 +138,18 @@ export class UsersService {
 
       // Use ID for sharding
       const shard = this.shardRouterService.getShardForUser(payload.id);
-      const prisma: PrismaClient = this.shardRouterService.getPrismaClient(shard.name);
+      const prisma: PrismaClient = this.shardRouterService.getPrismaClient(
+        shard.name,
+      );
 
       const user = await prisma.user.findUnique({
         where: { id: payload.id },
       });
 
       if (!user) {
-        this.logger.warn(`User with ID '${payload.id}' not found during token verification.`);
+        this.logger.warn(
+          `User with ID '${payload.id}' not found during token verification.`,
+        );
         return { isValid: false, message: 'User not found' };
       }
 
@@ -139,7 +161,9 @@ export class UsersService {
         },
       };
     } catch (error) {
-      this.logger.warn(`Token verification failed: ${(error as Error).message}`);
+      this.logger.warn(
+        `Token verification failed: ${(error as Error).message}`,
+      );
       return { isValid: false, message: 'Invalid token' };
     }
   }
@@ -162,7 +186,9 @@ export class UsersService {
       this.logger.warn(`User '${username}' not found in any shard.`);
       return null;
     } catch (error) {
-      this.logger.error(`Error searching for username '${username}': ${(error as Error).message}`);
+      this.logger.error(
+        `Error searching for username '${username}': ${(error as Error).message}`,
+      );
       throw error;
     }
   }

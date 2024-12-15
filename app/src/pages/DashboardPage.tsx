@@ -19,7 +19,7 @@ import { useSync } from "@/contexts/SyncContext";
 import { useDB } from "@/contexts/DBContext";
 import { Button } from "@/components/ui/button";
 import { LoadingOverlay } from "@/components/misc/LoadingOverlay";
-import { SYNC_SUCCESS } from "@/utils/toast-messages";
+import { SYNC_SUCCESS, TOAST_MESSAGES } from "@/utils/toast-messages";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 export const DashboardPage = () => {
   const { user } = useAuthContext();
@@ -34,7 +34,7 @@ export const DashboardPage = () => {
   const [isDirty, setIsDirty] = useState(false);
   const { mutate: fetchLists, isPending } = useFetchLists(user?.id ?? '');
 
-  const handleSync = () => {
+  const fetchFromServer = () => {
     if (user?.id) {
       fetchLists(undefined, {
         onSuccess: (serverLists) => {
@@ -44,6 +44,30 @@ export const DashboardPage = () => {
       });
     }
   };
+
+  const handleSync = async () => {    
+    syncLists(
+      { lists, userId: user?.id ?? '' },
+      {
+        onSuccess: () => {
+          toast(TOAST_MESSAGES.SYNC_SENT);
+          // This will happen in the next 30 seconds either way
+          // But this is ok
+          if (!isServerAlive) {
+            setIsServerAlive(true);
+          }
+        },
+        onError: () => {
+          toast(TOAST_MESSAGES.SYNC_FAILED);
+          // Same as above
+          if (isServerAlive) {
+            setIsServerAlive(false);
+          }
+        }
+      }
+    );
+  };
+
   
   // Initialize DB when user is available
   useEffect(() => {
@@ -268,7 +292,7 @@ export const DashboardPage = () => {
                   <Tooltip>
                     <TooltipTrigger>
                       <Button
-                        onClick={handleSync}
+                        onClick={fetchFromServer}
                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                         disabled={isPending || !isServerAlive}
                       >
@@ -291,6 +315,8 @@ export const DashboardPage = () => {
           currentFrequency={syncFrequency}
           onFrequencyChange={handleFrequencyChange}
           isServerAlive={isServerAlive}
+          isLoading={isPending}
+          onClick={handleSync}
         />
       </div>
     </div>

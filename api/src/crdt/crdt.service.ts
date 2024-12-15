@@ -43,7 +43,6 @@ export class CRDTService {
   constructor(
     @InjectQueue('crdt') private crdtQueue: Queue,
     private shardRouterService: ShardRouterService,
-    private usersService: UsersService,
   ) {}
 
   /**
@@ -71,7 +70,9 @@ export class CRDTService {
 
     // Determine the shard for the user
     const shard = this.shardRouterService.getShardForUser(userId);
-    const prisma: PrismaClient = this.shardRouterService.getPrismaClient(shard.name);
+    const prisma: PrismaClient = this.shardRouterService.getPrismaClient(
+      shard.name,
+    );
 
     const existingList = await prisma.list.findUnique({
       where: { id: existingListId },
@@ -79,7 +80,9 @@ export class CRDTService {
     });
 
     if (!existingList) {
-      throw new Error(`List with ID ${existingListId} not found in shard ${shard.name}`);
+      throw new Error(
+        `List with ID ${existingListId} not found in shard ${shard.name}`,
+      );
     }
 
     const sortedChanges = incomingChanges
@@ -193,7 +196,9 @@ export class CRDTService {
 
     // Determine the shard for the user
     const shard = this.shardRouterService.getShardForUser(userId);
-    const prisma: PrismaClient = this.shardRouterService.getPrismaClient(shard.name);
+    const prisma: PrismaClient = this.shardRouterService.getPrismaClient(
+      shard.name,
+    );
 
     for (const list of lists) {
       const existingList = await prisma.list.findUnique({
@@ -235,7 +240,9 @@ export class CRDTService {
     }));
 
     await prisma.bufferedChange.createMany({ data: changes });
-    this.logger.log(`Buffered ${changes.length} changes for user '${userId}' in shard '${shard.name}'`);
+    this.logger.log(
+      `Buffered ${changes.length} changes for user '${userId}' in shard '${shard.name}'`,
+    );
   }
 
   /**
@@ -262,15 +269,14 @@ export class CRDTService {
     for (const prisma of shardClients) {
       const result = await prisma.bufferedChange.deleteMany({
         where: {
-          AND: [
-            { resolved: true },
-            { timestamp: { lt: oneHourAgo } }
-          ],
+          AND: [{ resolved: true }, { timestamp: { lt: oneHourAgo } }],
         },
       });
 
       totalCount += result.count;
-      this.logger.log(`Cleaned up ${result.count} resolved changes in shard '${prisma}'`);
+      this.logger.log(
+        `Cleaned up ${result.count} resolved changes in shard '${prisma}'`,
+      );
     }
 
     return { count: totalCount };

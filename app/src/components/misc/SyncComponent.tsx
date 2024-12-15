@@ -1,4 +1,4 @@
-import { Clock, ChevronUp, Info } from "lucide-react";
+import { Clock, ChevronUp, Info, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { xTimeAgo } from "@/utils/date";
 import { useState } from "react";
@@ -11,14 +11,17 @@ import {
 } from "@/components/ui/select";
 
 interface SyncComponentProps {
+  onClick: () => void;
+  isLoading: boolean;
   lastSync: Date | null;
   onFrequencyChange?: (minutes: number) => void;
   currentFrequency?: number; // in minutes
   isServerAlive: boolean;
 }
 
-
-export const SyncComponent = ({
+export const SyncComponent = ({ 
+  onClick, 
+  isLoading, 
   lastSync,
   onFrequencyChange,
   currentFrequency = 30,
@@ -93,6 +96,27 @@ export const SyncComponent = ({
               </span>
             </div>
           </div>
+
+          <Button
+            onClick={onClick}
+            disabled={isLoading}
+            size="sm"
+            variant="ghost"
+            className={`
+              relative ml-auto p-1.5 rounded-md
+              ${isLoading 
+                ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' 
+                : 'hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400'
+              }
+              transition-all duration-200 ease-in-out
+            `}
+          >
+            <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading && (
+              <span className="absolute inset-0 rounded-md animate-ping bg-indigo-200 dark:bg-indigo-700 opacity-25" />
+            )}
+          </Button>
+
         </div>
       </div>
     </div>
