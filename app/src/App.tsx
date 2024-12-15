@@ -13,7 +13,7 @@ import { RegisterPage } from './pages/RegisterPage'
     
 function App() {
   const location = useLocation();
-  const isLoginPage = location.pathname === '/login';
+  const isAuthPage = location.pathname === '/register' || location.pathname === '/login';
   useDarkMode();
 
   return (
@@ -21,7 +21,7 @@ function App() {
       <AuthProvider>
         <SyncProvider>
           <div className="min-h-screen bg-gray-50">
-            {!isLoginPage && <Navbar />}
+            {!isAuthPage && <Navbar />}
           <main>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
