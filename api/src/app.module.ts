@@ -8,6 +8,7 @@ import { ZmqModule } from './zmq/zmq.module';
 import { BullModule } from '@nestjs/bull';
 import { CRDTModule } from './crdt/crdt.module';
 import { CacheModule } from '@nestjs/cache-manager';
+import { ShardRouterModule } from './sharding/shardRouter.module';
 @Module({
   imports: [
     BullModule.forRoot({
@@ -27,6 +28,7 @@ import { CacheModule } from '@nestjs/cache-manager';
     ListsModule,
     PrismaModule,
     ZmqModule,
+    ShardRouterModule,
   ],
   controllers: [AppController],
   providers: [AppService],
