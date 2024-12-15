@@ -70,22 +70,16 @@ export function LoginForm() {
         />
         <PasswordField />
 
-        <div className="flex justify-center mt-8">
-          <Button
-            type="submit"
+        <div className="flex items-center justify-start">
+          <Button   
+            type='submit'
             disabled={isLoading}
-            className="w-32 bg-slate-600 hover:bg-slate-700 text-white font-medium py-5 rounded-lg transition-all duration-200 shadow-lg hover:shadow-slate-600/20 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {isLoading ? (
-              <div className="flex items-center justify-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Wait...</span>
-              </div>
-            ) : (
-              "Login"
-            )}
+            {isLoading ? <Loader2 className="animate-spin" /> : 'Login'}
+            {isLoading && <span className="ml-2">Please wait...</span>}
           </Button>
         </div>
+
       </form>
     </Form>
   );

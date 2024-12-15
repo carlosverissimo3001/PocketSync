@@ -8,6 +8,11 @@ export interface AuthResponse {
     user: User;
     isValid?: boolean;
 }
+
+export interface RegisterResponse {
+    success: boolean;
+    message?: string;
+}
   
 export interface User {
     id: string;

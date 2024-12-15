@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LoginCredentials, AuthResponse } from "../types/auth.types";
+import { LoginCredentials, AuthResponse, RegisterResponse } from "../types/auth.types";
 import { authApi } from "../api/auth";
 import { useAuthContext } from "../contexts/AuthContext";
 import { useDB } from "@/contexts/DBContext";
@@ -37,12 +37,11 @@ export const useAuth = () => {
 
     try {
       const response = await authApi.register(params);
-      const { token, user } = response as AuthResponse;
-  
-      localStorage.setItem('token', token);
-      localStorage.setItem('sync-frequency', '0');
-  
-      updateAuth(user, token);
+      const { success, message } = response as RegisterResponse;
+      if (!success) {
+        setError(message || 'An error occurred during registration');
+        throw new Error(message || 'An error occurred during registration');
+      }
     } catch (err: any) {
       const message = err instanceof Error ? err.message : 'An error occurred during registration';
       setError(message);
