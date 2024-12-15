@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { passwordSchema } from "@/utils/password/password-schema";
 import { PasswordField } from "../ui/password-field";
 import { Loader2, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const formSchema = z.object({
   username: z.string().min(2, {
@@ -29,6 +30,7 @@ const formSchema = z.object({
 
 export const RegisterForm = () => {
   const { register, isLoading, error } = useAuth();
+  const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -39,8 +41,17 @@ export const RegisterForm = () => {
     },
   });
 
+  const { isValid, isDirty } = form.formState;
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    await register(values);
+    try {
+      await register(values);
+      navigate("/login", {
+        state: { registrationSuccess: "Registration successful. Please login." },
+      });
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   return (
@@ -78,8 +89,16 @@ export const RegisterForm = () => {
         <div className="flex justify-center mt-8">
           <Button
             type="submit"
-            disabled={isLoading}
-            className="w-32 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-5 rounded-lg transition-all duration-200 shadow-lg hover:shadow-indigo-600/20 disabled:opacity-70 disabled:cursor-not-allowed"
+            disabled={isLoading || !isDirty || !isValid}
+            className={`
+                w-32 font-medium py-5 rounded-lg transition-all duration-200 
+                ${
+                isLoading || !isDirty || !isValid
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-600/20 shadow-lg"
+                }
+                text-white
+            `}
           >
             {isLoading ? (
               <div className="flex items-center justify-center gap-2">

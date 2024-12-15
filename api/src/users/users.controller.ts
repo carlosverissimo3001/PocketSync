@@ -9,18 +9,18 @@ import {
 import { UsersService } from './users.service';
 import { CreateUserDto } from 'src/dtos/create-user.dto';
 
-@Controller('login')
+@Controller('users')
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
-  @Post()
+  @Post('login')
   @HttpCode(200)
   async login(@Body() body: CreateUserDto) {
     try {
-      const result = await this.usersService.login(
-        body.username,
-        body.password,
-      );
+      const result = await this.usersService.login({
+        username: body.username,
+        password: body.password,
+      });
       if (!result) {
         throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
       }
@@ -33,6 +33,19 @@ export class UsersController {
         'Invalid username or password',
         HttpStatus.UNAUTHORIZED,
       );
+    }
+  }
+
+  @Post('register')
+  @HttpCode(200)
+  async register(@Body() body: CreateUserDto) {
+    try {
+      return this.usersService.register(body);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException('User already exists', HttpStatus.CONFLICT);
     }
   }
 
