@@ -36,7 +36,7 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit() {
-    this.hashRing = new HashRing(100);
+    this.hashRing = new HashRing(20);
 
     // Define shards from environment
     const shards: ShardInfo[] = [
@@ -271,13 +271,12 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
           this.logger.log(
             `Write quorum achieved (${this.W}/${this.W}).`,
           );
-          break;
+          //break; ensure full replication? not sure
         }
       } catch (error) {
         this.logger.error(
           `Write failed on shard '${shard.name}' for key '${key}': ${(error as Error).message}`,
         );
-        // Continue trying with the next shard
       }
     }
 
