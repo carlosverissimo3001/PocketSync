@@ -26,6 +26,9 @@ const formSchema = z.object({
   }),
   password: passwordSchema,
   confirmPassword: passwordSchema,
+}).refine((data) => data.password === data.confirmPassword, {
+  path: ["confirmPassword"],
+  message: "Passwords do not match.",
 });
 
 export const RegisterForm = () => {
@@ -40,8 +43,6 @@ export const RegisterForm = () => {
       confirmPassword: "",
     },
   });
-
-  const { isValid, isDirty } = form.formState;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -89,14 +90,10 @@ export const RegisterForm = () => {
         <div className="flex justify-center mt-8">
           <Button
             type="submit"
-            disabled={isLoading || !isDirty || !isValid}
+            disabled={isLoading}
             className={`
                 w-32 font-medium py-5 rounded-lg transition-all duration-200 
-                ${
-                isLoading || !isDirty || !isValid
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-600/20 shadow-lg"
-                }
+                bg-indigo-600 hover:bg-indigo-700 hover:shadow-indigo-600/20 shadow-lg
                 text-white
             `}
           >
