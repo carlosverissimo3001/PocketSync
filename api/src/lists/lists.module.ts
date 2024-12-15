@@ -1,11 +1,11 @@
+import { Module } from '@nestjs/common';
 import { CRDTModule } from '@/crdt/crdt.module';
 import { ZmqModule } from '@/zmq/zmq.module';
 import { BullModule } from '@nestjs/bull';
-import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ListsController } from './lists.controller';
 import { ListsService } from './lists.service';
-import { ShardRouterService } from '@/sharding/shardRouter.service';
+import { ShardRouterModule } from '@/sharding/shardRouter.module';
 
 @Module({
   imports: [
@@ -15,8 +15,9 @@ import { ShardRouterService } from '@/sharding/shardRouter.service';
     BullModule.registerQueue({
       name: 'crdt',
     }),
+    ShardRouterModule,
   ],
-  providers: [ListsService,ShardRouterService],
+  providers: [ListsService], // Removed ShardRouterService
   controllers: [ListsController],
   exports: [ListsService],
 })

@@ -4,7 +4,7 @@ import { ZmqModule } from '@/zmq/zmq.module';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { CRDTService } from './crdt.service';
 import { CRDTConsumer } from './crdt.consumer';
-import { ShardRouterService } from '@/sharding/shardRouter.service';
+import { ShardRouterModule } from '@/sharding/shardRouter.module';
 import { UsersModule } from '@/users/users.module';
 
 @Module({
@@ -19,8 +19,9 @@ import { UsersModule } from '@/users/users.module';
     ZmqModule,
     PrismaModule,
     UsersModule,
+    ShardRouterModule,
   ],
-  providers: [CRDTService, CRDTConsumer, ShardRouterService],
+  providers: [CRDTService, CRDTConsumer], // Removed ShardRouterService
   exports: [CRDTService],
 })
 export class CRDTModule {}

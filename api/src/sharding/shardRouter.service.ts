@@ -1,8 +1,13 @@
+// src/sharding/shardRouter.service.ts
+
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { HashRing } from './hashRing';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject } from '@nestjs/common';
+import { Cache } from 'cache-manager';
 
 interface ShardInfo {
   name: string;
@@ -15,14 +20,14 @@ export class ShardRouterService implements OnModuleInit {
   private shardClients: Record<string, PrismaClient> = {};
   private readonly logger = new Logger(ShardRouterService.name);
 
-  // Quorum parameters (can be moved to environment variables)
-  private readonly N = 2; // Total replicas
-  private readonly R = 1; // Read quorum
-  private readonly W = 1; // Write quorum
+  // Quorum parameters
+  private readonly N = parseInt(process.env.QUORUM_N, 10) || 3; // Total replicas
+  private readonly R = parseInt(process.env.QUORUM_R, 10) || 2; // Read quorum
+  private readonly W = parseInt(process.env.QUORUM_W, 10) || 2; // Write quorum
 
-  // Queue for hinted handoff (optional)
   constructor(
     @InjectQueue('handoff') private handoffQueue: Queue,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   onModuleInit() {
@@ -102,12 +107,8 @@ export class ShardRouterService implements OnModuleInit {
       },
     };
 
-    // Return a Proxy for each shard's PrismaClient
-    // Note: Since operations are handled by ShardRouterService, return a dummy PrismaClient
-    // or the primary shard's client. Alternatively, you can return a custom PrismaClient.
-    // For simplicity, returning a Proxy that ignores the actual target.
-
-    const dummyPrisma = new PrismaClient(); // Placeholder, won't be used
+    // Return a Proxy that intercepts PrismaClient method calls
+    const dummyPrisma = new PrismaClient(); // Placeholder, won't be used directly
     const proxy = new Proxy(dummyPrisma, handlers);
 
     return proxy;
@@ -128,6 +129,7 @@ export class ShardRouterService implements OnModuleInit {
         const data = args[1]; // The second argument is the data
         // Perform the operation dynamically
         const result = await prisma[model][operation](data);
+        this.logger.debug(`Write operation ${operation} succeeded on shard ${shard.name}`);
         return { shard: shard.name, success: true, result };
       } catch (error: unknown) {
         // Type-safe error handling
@@ -183,6 +185,7 @@ export class ShardRouterService implements OnModuleInit {
         const query = args[1]; // The second argument is the query
         // Perform the operation dynamically
         const result = await prisma[model][operation](query);
+        this.logger.debug(`Read operation ${operation} succeeded on shard ${shard.name}`);
         return { shard: shard.name, success: true, result };
       } catch (error: unknown) {
         // Type-safe error handling

@@ -12,8 +12,9 @@ import { ShardRouterModule } from '../sharding/shardRouter.module';
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1d' },
     }),
+    ShardRouterModule,
   ],
-  providers: [UsersService, ShardRouterModule],
+  providers: [UsersService], // Removed ShardRouterService
   controllers: [UsersController],
   exports: [UsersService],
 })
