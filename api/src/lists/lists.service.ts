@@ -51,25 +51,24 @@ export class ListsService {
   }
 
   /**
-   * Retrieves all lists for a given user.
+   * Retrieves all lists for a given user using read quorum.
    * @param userId - The ID of the user.
    * @returns All lists for the given user.
    */
   async getLists(userId: string): Promise<List[]> {
     try {
-      // Determine the shard for the user and retrieve the PrismaClient
-      const shard = this.shardRouterService.getShardForUser(userId);
-      const prisma: PrismaClient = this.shardRouterService.getPrismaClient(
-        shard.name,
+      const lists = await this.shardRouterService.readWithQuorum<List[]>(
+        `lists:${userId}`, // Sharding key
+        async (prisma) => {
+          return await prisma.list.findMany({
+            where: { ownerId: userId },
+            include: { items: true },
+          });
+        },
       );
 
-      const lists = await prisma.list.findMany({
-        where: { ownerId: userId },
-        include: { items: true },
-      });
-
       this.logger.log(
-        `Retrieved ${lists.length} lists for userId: ${userId} from shard: ${shard.name}`,
+        `Retrieved ${lists.length} lists for userId: ${userId} with quorum.`,
       );
       return lists;
     } catch (error) {
@@ -100,22 +99,25 @@ export class ListsService {
         return prisma;
       }
 
-      // If not in cache, search all shards
-      const shardClients = await this.shardRouterService.getAllShardClients();
-      for (const [shardName, prisma] of Object.entries(shardClients)) {
-        const list = await prisma.list.findUnique({ where: { id: listId } });
-        if (list) {
-          // Cache the shard name for this list ID
-          await this.cacheManager.set(
-            `list:${listId}`,
-            shardName,
-            60 * 60 * 1000,
-          ); // Cache for 1 hour
-          this.logger.log(
-            `Found listId: ${listId} in shard: ${shardName} and cached it.`,
-          );
-          return prisma;
-        }
+      // If not in cache, search using read quorum
+      const list = await this.shardRouterService.readWithQuorum<List | null>(
+        `list:${listId}`, // Sharding key
+        async (prisma) => {
+          return await prisma.list.findUnique({ where: { id: listId } });
+        },
+      );
+
+      if (list) {
+        const shard = this.shardRouterService.getShardForUser(list.ownerId);
+        await this.cacheManager.set(
+          `list:${listId}`,
+          shard.name,
+          3600000,
+        );
+        this.logger.log(
+          `Found listId: ${listId} in shard: ${shard.name} and cached it.`,
+        );
+        return this.shardRouterService.getPrismaClient(shard.name);
       }
 
       this.logger.warn(`List with ID ${listId} not found in any shard.`);
@@ -130,44 +132,47 @@ export class ListsService {
   }
 
   /**
-   * Retrieves a single list by its ID.
+   * Retrieves a single list by its ID using read quorum.
    * @param id - The ID of the list.
    * @returns The list with the given ID, including the owner's username.
    * @throws NotFoundException if the list does not exist.
    */
   async getList(id: string): Promise<List & { owner: Partial<User> }> {
     try {
-      const prisma = await this.getShardForListId(id);
-      if (!prisma) {
-        throw new NotFoundException(`List with ID ${id} not found`);
-      }
+      const list = await this.shardRouterService.readWithQuorum<List & { owner: Partial<User> }>(
+        `list:${id}`, // Sharding key
+        async (prisma) => {
+          const fetchedList = await prisma.list.findUnique({
+            where: { id },
+            include: { items: true },
+          });
 
-      const list = await prisma.list.findUnique({
-        where: { id },
-        include: { items: true },
-      });
+          if (!fetchedList) return null;
+
+          const owner = await prisma.user.findUnique({
+            where: { id: fetchedList.ownerId },
+            select: { username: true },
+          });
+
+          if (!owner) {
+            this.logger.warn(
+              `Owner with ID '${fetchedList.ownerId}' not found for listId: ${id}`,
+            );
+            return { ...fetchedList, owner: { username: 'Unknown' } };
+          }
+
+          this.logger.log(
+            `Retrieved listId: ${id} with owner: ${owner.username} from shard with quorum.`,
+          );
+          return { ...fetchedList, owner };
+        },
+      );
 
       if (!list) {
         throw new NotFoundException(`List with ID ${id} not found`);
       }
 
-      // Since lists are sharded by user, fetch the owner from the same shard
-      const owner = await prisma.user.findUnique({
-        where: { id: list.ownerId },
-        select: { username: true },
-      });
-
-      if (!owner) {
-        this.logger.warn(
-          `Owner with ID ${list.ownerId} not found for listId: ${id}`,
-        );
-        return { ...list, owner: { username: 'Unknown' } };
-      }
-
-      this.logger.log(
-        `Retrieved listId: ${id} with owner: ${owner.username} from shard.`,
-      );
-      return { ...list, owner };
+      return list;
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
