@@ -17,10 +17,7 @@ export const authApi = {
       const response = await api.post(`${BASE_URL}/login`, credentials);
       return response.data;
     } catch (error: any) {
-      if (error?.response?.status === 401) {
-        throw new AuthError(error.response.data.message);
-      }
-      throw new AuthError('An error occurred while signing in.');
+      throw new AuthError(error.response.data.message);
     }
   },
 
@@ -29,10 +26,7 @@ export const authApi = {
       const response = await api.post(`${BASE_URL}/register`, credentials);
       return response.data;
     } catch (error: any) {
-      if (error?.response?.status === 409) {
-        throw new AuthError(error.response.data.message);
-      }
-      throw new AuthError('An error occurred while registering.');
+      throw new AuthError(error.response.data.message);
     }
   },
 
