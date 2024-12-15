@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { useAuth } from "@/hooks/useAuth"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { passwordSchema } from "@/utils/password/password-schema"
 import { PasswordField } from "../ui/password-field"
-import { Loader2 } from "lucide-react"
+import { Loader2, AlertCircle } from "lucide-react"
 
 
 const formSchema = z.object({
@@ -43,21 +43,19 @@ export function LoginForm() {
 
   // Defines the submit handler (login hook)
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    try {
-      await login(values);
-    } catch (error) {
-      console.error(error);
-    }
+    await login(values);
   }
 
   return (
     <Form {...form}>
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-    {error && ( 
-      <Alert variant="destructive">
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    )}
+    {error && (
+        <Alert variant="destructive" className="border-red-500/50 text-red-400">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
         <FormField
         control={form.control}
         name="username"

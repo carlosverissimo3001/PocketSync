@@ -1,17 +1,21 @@
 import { LoginForm } from "../components/auth/LoginForm";
-import { Navigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "../contexts/AuthContext";
 import { LoadingOverlay } from "../components/misc/LoadingOverlay";
+import { useEffect } from "react";
 
 export const LoginPage = () => {
   const { user, token, isInitialized, isLoading } = useAuthContext();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isInitialized && !isLoading && user && token) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, token, isInitialized, isLoading, navigate]);
 
   if (!isInitialized || isLoading) {
     return <LoadingOverlay />;
-  }
-
-  if (user && token) {
-    return <Navigate to="/dashboard" replace />;
   }
 
   return (
