@@ -2,15 +2,15 @@ import { useState } from "react";
 import { LoginCredentials, AuthResponse } from "../types/auth.types";
 import { authApi } from "../api/auth";
 import { useAuthContext } from "../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 import { useDB } from "@/contexts/DBContext";
 
 export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { setUser, setToken } = useAuthContext();
+  const { updateAuth } = useAuthContext();
   const { closeUserDB } = useDB();
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const login = async (params: LoginCredentials) => {
     setIsLoading(true);
@@ -19,26 +19,16 @@ export const useAuth = () => {
     try {
       const response = await authApi.login(params);
       const { token, user } = response as AuthResponse;
-
-      // updates the local storage
+  
+      // Set localStorage items
       localStorage.setItem('token', token);
       localStorage.setItem('sync-frequency', '0');
+  
+      // Update state
+      updateAuth(user, token);
 
-      // updates the context
-      setUser(user);
-      setToken(token);
-
-      navigate("/dashboard");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (err: any) {
-    console.log('Login Error:', {
-        error: err,
-        response: err.response,
-        data: err.response?.data,
-        message: err.response?.data?.message
-      });
-      const message =
-        err.response?.data?.message || 'An error occurred during login';
+    } catch (err: any) {
+      const message = err instanceof Error ? err.message : 'An error occurred during login';
       setError(message);
       throw err;
     } finally {
@@ -48,10 +38,9 @@ export const useAuth = () => {
 
   const logout = async () => {
     await closeUserDB();
-    setUser(null);
-    setToken("");
+    updateAuth(null, "");
     localStorage.removeItem('sync-frequency');
-    navigate("/login");
+    // navigate("/login");
   };
 
   return { login, logout, isLoading, error };

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '../types/auth.types';
 import { authApi } from '../api/auth';
 import { AuthResponse } from '../types/auth.types';
@@ -13,6 +13,7 @@ interface AuthContextType {
   isInitialized: boolean;
   setIsInitialized: (value: boolean) => void;
   isLoading: boolean;
+  updateAuth: (user: User | null, token: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,11 +23,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
     return storedUser ? JSON.parse(storedUser) : null;
   });
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState<string | null>(() => {
     return localStorage.getItem('token') || sessionStorage.getItem('token');
   });
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const updateAuth = useCallback((user: User | null, token: string) => {
+    handleSetUser(user);
+    handleSetToken(token);
+  }, []);
 
   useEffect(() => {
     const verifyAuth = async () => {
@@ -68,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('user');
       sessionStorage.removeItem('user');
     }
+    setToken(newToken);
   };
 
   const handleSetUser = (newUser: User | null) => {
@@ -88,7 +95,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated: !!user && !!token,
     isInitialized,
     setIsInitialized,
-    isLoading
+    isLoading,
+    updateAuth
   };
 
   if (isLoading) {
