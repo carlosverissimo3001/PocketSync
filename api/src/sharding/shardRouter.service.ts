@@ -26,9 +26,9 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ShardRouterService.name);
 
   // Quorum parameters
-  private readonly N = parseInt(process.env.QUORUM_N, 10) || 3; // Total replicas
-  private readonly R = parseInt(process.env.QUORUM_R, 10) || 2; // Read quorum
-  private readonly W = parseInt(process.env.QUORUM_W, 10) || 2; // Write quorum
+  private readonly N = 3; // Total replicas
+  private readonly R = 2; // Read quorum
+  private readonly W = 2; // Write quorum
 
   constructor(
     @InjectQueue('handoff') private handoffQueue: Queue,
@@ -36,7 +36,7 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   async onModuleInit() {
-    this.hashRing = new HashRing(100);
+    this.hashRing = new HashRing(20);
 
     // Define shards from environment
     const shards: ShardInfo[] = [
@@ -44,6 +44,7 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
       { name: 'shard-b', connectionUrl: process.env.SHARD_B_URL },
       { name: 'shard-c', connectionUrl: process.env.SHARD_C_URL },
       { name: 'shard-d', connectionUrl: process.env.SHARD_D_URL },
+      { name: 'shard-e', connectionUrl: process.env.SHARD_E_URL }, // Added shard-e
     ];
 
     for (const shard of shards) {
@@ -90,12 +91,31 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Get the shards responsible for a given key based on replication factor.
+   * @param key The key to hash.
+   * @returns Array of ShardInfo responsible for the key.
+   */
+  public getShardsForKey(key: string): ShardInfo[] {
+    return this.hashRing.getShardsForKey(key, this.N);
+  }
+
+  /**
+   * Get the PrismaClients responsible for a given key.
+   * @param key The key to hash.
+   * @returns Array of PrismaClient instances.
+   */
+  public getPrismaClientsForKey(key: string): PrismaClient[] {
+    const shards = this.getShardsForKey(key);
+    return shards.map((shard) => this.getPrismaClient(shard.name));
+  }
+
+  /**
    * Get the shard responsible for a given key.
    * @param key The key to hash.
    * @returns ShardInfo
    */
   public getShardForKey(key: string): ShardInfo {
-    return this.hashRing.getShardForKey(key);
+    return this.hashRing.getPrimaryShard(key);
   }
 
   /**
@@ -127,21 +147,6 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
    */
   public async getAllShardClients(): Promise<PrismaClient[]> {
     return Object.values(this.shardClients);
-  }
-
-  /**
-   * Get a PrismaClient by shard index.
-   * @param index The index of the shard.
-   * @returns PrismaClient
-   */
-  public async findByIndex(index: number): Promise<PrismaClient> {
-    const shardNames = Object.keys(this.shardClients);
-    const shardName = shardNames[index];
-    if (!shardName) {
-      this.logger.error(`Shard at index ${index} does not exist.`);
-      throw new Error(`Shard at index ${index} does not exist.`);
-    }
-    return this.getPrismaClient(shardName);
   }
 
   /**
@@ -201,14 +206,7 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /**
-   * Get N shards responsible for the key.
-   * @param key The key to hash.
-   * @returns Array of ShardInfo.
-   */
-  private getShardsForKey(key: string): ShardInfo[] {
-    return this.hashRing.getShardsForKey(key, this.N);
-  }
+
 
   /**
    * Select a fallback shard for hinted handoff.
@@ -247,5 +245,97 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
       `No suitable fallback shard found for failed shard ${failedShardName}`,
     );
     return null;
+  }
+
+  /**
+   * Write data to multiple shards with write quorum.
+   * @param key The key to hash.
+   * @param writeFn The write function to execute on each shard.
+   */
+  public async writeWithQuorum(
+    key: string,
+    writeFn: (prisma: PrismaClient) => Promise<void>,
+  ): Promise<void> {
+    const shards = this.getShardsForKey(key);
+    let successfulWrites = 0;
+
+    for (const shard of shards) {
+      const prisma = this.getPrismaClient(shard.name);
+      try {
+        await writeFn(prisma);
+        successfulWrites += 1;
+        this.logger.log(
+          `Write succeeded on shard '${shard.name}' for key '${key}'.`,
+        );
+        if (successfulWrites >= this.W) {
+          this.logger.log(
+            `Write quorum achieved (${this.W}/${this.W}).`,
+          );
+          //break; ensure full replication? not sure
+        }
+      } catch (error) {
+        this.logger.error(
+          `Write failed on shard '${shard.name}' for key '${key}': ${(error as Error).message}`,
+        );
+      }
+    }
+
+    if (successfulWrites < this.W) {
+      this.logger.error(
+        `Write quorum not achieved for key '${key}'. Required: ${this.W}, Succeeded: ${successfulWrites}.`,
+      );
+      throw new Error('Write quorum not achieved.');
+    }
+  }
+
+  /**
+   * Read data from multiple shards with read quorum.
+   * @param key The key to hash.
+   * @param readFn The read function to execute on each shard.
+   * @returns The data if quorum is achieved, else null.
+   */
+  public async readWithQuorum<T>(
+    key: string,
+    readFn: (prisma: PrismaClient) => Promise<T | null>,
+  ): Promise<T | null> {
+    const shards = this.getShardsForKey(key);
+    const results: T[] = [];
+    let successfulReads = 0;
+
+    for (const shard of shards) {
+      const prisma = this.getPrismaClient(shard.name);
+      try {
+        const data = await readFn(prisma);
+        if (data) {
+          results.push(data);
+          successfulReads += 1;
+          this.logger.log(
+            `Read succeeded on shard '${shard.name}' for key '${key}'.`,
+          );
+          if (successfulReads >= this.R) {
+            this.logger.log(
+              `Read quorum achieved (${this.R}/${this.R}).`,
+            );
+            break;
+          }
+        }
+      } catch (error) {
+        this.logger.error(
+          `Read failed on shard '${shard.name}' for key '${key}': ${(error as Error).message}`,
+        );
+        // Continue trying with the next shard
+      }
+    }
+
+    if (successfulReads >= this.R) {
+      // Optionally, implement conflict resolution if needed
+      // For simplicity, return the first successful read
+      return results[0];
+    } else {
+      this.logger.error(
+        `Read quorum not achieved for key '${key}'. Required: ${this.R}, Succeeded: ${successfulReads}.`,
+      );
+      return null;
+    }
   }
 }

@@ -1,4 +1,4 @@
-// src/sharding/hashring.ts
+// src/sharding/hashRing.ts
 
 import * as crypto from 'crypto';
 
@@ -86,16 +86,6 @@ export class HashRing {
   }
 
   /**
-   * Retrieves the primary shard responsible for a given key.
-   * @param key The key to hash.
-   * @returns The primary ShardInfo responsible for the key.
-   */
-  getShardForKey(key: string): ShardInfo {
-    const shards = this.getShardsForKey(key, 1);
-    return shards[0];
-  }
-
-  /**
    * Removes a shard from the hash ring, typically during failure or maintenance.
    * @param shardName The name of the shard to remove.
    */
@@ -125,5 +115,14 @@ export class HashRing {
    */
   getRing(): ReadonlyMap<number, ShardInfo> {
     return this.ring;
+  }
+
+  /**
+   * Returns the primary shard for a given key.
+   * @param key The key to hash.
+   * @returns The primary ShardInfo.
+   */
+  getPrimaryShard(key: string): ShardInfo {
+    return this.getShardsForKey(key, 1)[0];
   }
 }

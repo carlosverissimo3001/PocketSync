@@ -28,42 +28,55 @@ export class UsersService {
 
   /**
    * Logs in a user by verifying their credentials.
-   * If the user does not exist, creates a new user in the appropriate shard.
+   * If the user does not exist, creates a new user in the appropriate shards with replication.
    * @param username The username of the user.
    * @param password The password of the user.
    * @returns An object containing the user (without password), JWT token, and validation status.
    */
   async login(username: string, password: string) {
     try {
-      // Search all shards for the user
-      let user = null;
-      const prisma = await this.getShardForUsername(username);
+      // Search for the user with read quorum
+      const user = await this.shardRouterService.readWithQuorum<UserEntity>(
+        `user:${username}`,
+        async (prisma) => {
+          return await prisma.user.findUnique({ where: { username } });
+        },
+      );
 
-      if (prisma) {
-        user = await prisma.user.findUnique({ where: { username } });
-      }
-
-      // If user does not exist in any shard, create them in the appropriate shard
       if (!user) {
+        // If user does not exist, create them with replication
         const hashedPassword = await bcrypt.hash(password, 10);
         const userId = uuid();
 
-        // Determine the shard for the new user based on userId
-        const shard = this.shardRouterService.getShardForUser(userId);
-        const shardPrisma = this.shardRouterService.getPrismaClient(shard.name);
+        // Define user data
+        const userData = {
+          id: userId,
+          username,
+          password: hashedPassword,
+          createdAt: new Date(),
+        };
 
-        // Create user in the determined shard
-        user = await shardPrisma.user.create({
-          data: {
-            id: userId,
-            username,
-            password: hashedPassword,
+        // Write to multiple shards with write quorum
+        await this.shardRouterService.writeWithQuorum(
+          `user:${userId}`,
+          async (prisma) => {
+            await prisma.user.create({ data: userData });
           },
-        });
+        );
 
         this.logger.log(
-          `Created new user '${username}' with ID '${userId}' in shard '${shard.name}'`,
+          `Created new user '${username}' with ID '${userId}' across multiple shards.`,
         );
+
+        // Cache the user ID to username mapping for subsequent logins
+        await this.cacheManager.set(
+          `user:${userId}`,
+          username,
+          60 * 60 * 1000, // 1 hour in milliseconds
+        );
+
+        const token = this.generateJwt(userData);
+        return { user: this.omitPassword(userData), token, isValid: true };
       } else {
         // If user exists, check password
         const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -71,19 +84,17 @@ export class UsersService {
           this.logger.warn(`Invalid password attempt for user '${username}'`);
           throw new UnauthorizedException('Invalid username or password');
         }
-      }
 
-      // Cache the user ID to username mapping for subsequent logins
-      if (user) {
+        // Cache the user ID to username mapping for subsequent logins
         await this.cacheManager.set(
           `user:${user.id}`,
           user.username,
           60 * 60 * 1000, // 1 hour in milliseconds
         );
-      }
 
-      const token = this.generateJwt(user);
-      return { user: this.omitPassword(user), token, isValid: true };
+        const token = this.generateJwt(user);
+        return { user: this.omitPassword(user), token, isValid: true };
+      }
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error; // Re-throw authentication errors
@@ -96,26 +107,26 @@ export class UsersService {
   }
 
   /**
-   * Retrieves a user by their ID.
+   * Retrieves a user by their ID with read quorum.
    * @param id The ID of the user.
    * @returns The user entity or null if not found.
    */
   async findUserById(id: string) {
     try {
-      // Determine the shard for the user based on userId
-      const shard = this.shardRouterService.getShardForUser(id);
-      const prisma: PrismaClient = this.shardRouterService.getPrismaClient(
-        shard.name,
+      const user = await this.shardRouterService.readWithQuorum<UserEntity>(
+        `user:${id}`,
+        async (prisma) => {
+          return await prisma.user.findUnique({ where: { id } });
+        },
       );
 
-      const user = await prisma.user.findUnique({ where: { id } });
       if (user) {
         this.logger.log(
-          `Retrieved user '${user.username}' from shard '${shard.name}'`,
+          `Retrieved user '${user.username}' with ID '${id}'.`,
         );
       } else {
         this.logger.warn(
-          `User with ID '${id}' not found in shard '${shard.name}'`,
+          `User with ID '${id}' not found across all shards.`,
         );
       }
       return user;
@@ -128,7 +139,7 @@ export class UsersService {
   }
 
   /**
-   * Verifies a JWT token and retrieves the associated user.
+   * Verifies a JWT token and retrieves the associated user with read quorum.
    * @param token The JWT token to verify.
    * @returns An object indicating whether the token is valid and the user details if valid.
    */
@@ -137,14 +148,14 @@ export class UsersService {
       const payload = this.jwtService.verify(token);
 
       // Use ID for sharding
-      const shard = this.shardRouterService.getShardForUser(payload.id);
-      const prisma: PrismaClient = this.shardRouterService.getPrismaClient(
-        shard.name,
+      const user = await this.shardRouterService.readWithQuorum<UserEntity>(
+        `user:${payload.id}`,
+        async (prisma) => {
+          return await prisma.user.findUnique({
+            where: { id: payload.id },
+          });
+        },
       );
-
-      const user = await prisma.user.findUnique({
-        where: { id: payload.id },
-      });
 
       if (!user) {
         this.logger.warn(
@@ -165,31 +176,6 @@ export class UsersService {
         `Token verification failed: ${(error as Error).message}`,
       );
       return { isValid: false, message: 'Invalid token' };
-    }
-  }
-
-  /**
-   * Finds the shard responsible for a given username by searching all shards.
-   * @param username The username to search for.
-   * @returns The PrismaClient of the shard containing the user or null if not found.
-   */
-  async getShardForUsername(username: string): Promise<PrismaClient | null> {
-    try {
-      const shards = await this.shardRouterService.getAllShardClients();
-      for (const shard of shards) {
-        const user = await shard.user.findUnique({ where: { username } });
-        if (user) {
-          this.logger.log(`Found user '${username}' in shard '${shard}'`);
-          return shard;
-        }
-      }
-      this.logger.warn(`User '${username}' not found in any shard.`);
-      return null;
-    } catch (error) {
-      this.logger.error(
-        `Error searching for username '${username}': ${(error as Error).message}`,
-      );
-      throw error;
     }
   }
 
@@ -217,5 +203,36 @@ export class UsersService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...result } = user;
     return result;
+  }
+
+  /**
+   * Finds the shard responsible for a given username by searching all shards with read quorum.
+   * @param username The username to search for.
+   * @returns The PrismaClient of the shard containing the user or null if not found.
+   */
+  async getShardForUsername(username: string): Promise<PrismaClient | null> {
+    try {
+      const user = await this.shardRouterService.readWithQuorum<UserEntity>(
+        `user:${username}`,
+        async (prisma) => {
+          return await prisma.user.findUnique({ where: { username } });
+        },
+      );
+
+      if (user) {
+        this.logger.log(`Found user '${username}' in shard '${user.id}'.`);
+        return this.shardRouterService.getPrismaClient(
+          this.shardRouterService.getShardForUser(user.id).name,
+        );
+      }
+
+      this.logger.warn(`User '${username}' not found in any shard.`);
+      return null;
+    } catch (error) {
+      this.logger.error(
+        `Error searching for username '${username}': ${(error as Error).message}`,
+      );
+      throw error;
+    }
   }
 }
