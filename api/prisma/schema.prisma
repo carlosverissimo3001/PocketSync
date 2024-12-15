@@ -46,8 +46,7 @@ model ListItem {
   list         List      @relation(fields: [listId], references: [id])
   createdAt    DateTime  @default(now()) @map("created_at")
   deleted      Boolean   @default(false)
-  // Different items from the same list can have different last editors, this is good for tracking changes
-  lastEditorUsername String?
+  lastEditorUsername String?  // Different items from the same list can have different last editors, this is good for tracking changes
 }
 
 model BufferedChange {

@@ -6,7 +6,6 @@
  * changes from a buffer into the main list, buffering new changes, checking if
  * jobs are already queued for a user, and cleaning up resolved changes from the buffer.
  */
-
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
@@ -14,6 +13,8 @@ import { BufferedChange } from '@prisma/client';
 import { List as ListEntity } from '@/entities';
 import { ShardRouterService } from '@/sharding/shardRouter.service';
 import { UsersService } from '@/users/users.service';
+import { PrismaClient } from '@prisma/client';
+
 /**
  * Interface for the payload of a change.
  */
@@ -68,7 +69,9 @@ export class CRDTService {
       throw new Error('Invalid or missing user ID');
     }
 
-    const prisma = await this.shardRouterService.getShardClientForKey(userId);
+    // Determine the shard for the user
+    const shard = this.shardRouterService.getShardForUser(userId);
+    const prisma: PrismaClient = this.shardRouterService.getPrismaClient(shard.name);
 
     const existingList = await prisma.list.findUnique({
       where: { id: existingListId },
@@ -76,7 +79,7 @@ export class CRDTService {
     });
 
     if (!existingList) {
-      throw new Error(`List with ID ${existingListId} not found`);
+      throw new Error(`List with ID ${existingListId} not found in shard ${shard.name}`);
     }
 
     const sortedChanges = incomingChanges
@@ -117,8 +120,6 @@ export class CRDTService {
         id: existingListId,
         name: sortedChanges[0].changes.name,
         updatedAt: sortedChanges[0].changes.updatedAt,
-        // Safe to use the lastEditorId on the create case, since we know that
-        // the requester/editor is the owner of the list.
         owner: { connect: { id: userId } },
         lastEditorUsername: sortedChanges[0].changes.lastEditorUsername,
       },
@@ -190,8 +191,9 @@ export class CRDTService {
       throw new Error('Invalid input for buffering');
     }
 
-    // Use user ID for sharding
-    const prisma = await this.shardRouterService.getShardClientForKey(userId);
+    // Determine the shard for the user
+    const shard = this.shardRouterService.getShardForUser(userId);
+    const prisma: PrismaClient = this.shardRouterService.getPrismaClient(shard.name);
 
     for (const list of lists) {
       const existingList = await prisma.list.findUnique({
@@ -220,6 +222,7 @@ export class CRDTService {
         };
 
         await prisma.list.create({ data });
+        this.logger.log(`List '${list.name}' created in shard '${shard.name}'`);
       }
     }
 
@@ -232,6 +235,7 @@ export class CRDTService {
     }));
 
     await prisma.bufferedChange.createMany({ data: changes });
+    this.logger.log(`Buffered ${changes.length} changes for user '${userId}' in shard '${shard.name}'`);
   }
 
   /**
@@ -249,13 +253,13 @@ export class CRDTService {
    * @returns The number of resolved buffer changes that were cleaned up.
    */
   async cleanupResolvedBufferChanges(): Promise<{ count: number }> {
-    const shards = await this.shardRouterService.getAllShardClients();
+    const shardClients = await this.shardRouterService.getAllShardClients();
     const oneHourAgo = new Date();
     oneHourAgo.setHours(oneHourAgo.getHours() - 1);
 
     let totalCount = 0;
 
-    for (const prisma of shards) {
+    for (const prisma of shardClients) {
       const result = await prisma.bufferedChange.deleteMany({
         where: {
           AND: [
@@ -266,6 +270,7 @@ export class CRDTService {
       });
 
       totalCount += result.count;
+      this.logger.log(`Cleaned up ${result.count} resolved changes in shard '${prisma}'`);
     }
 
     return { count: totalCount };

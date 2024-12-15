@@ -1,3 +1,5 @@
+// src/crdt/crdt.consumer.ts
+
 /**
  * CRDTConsumer
  *
@@ -9,6 +11,7 @@
  * The consumer is integrated with ZMQ for publishing updates, uses Prisma for database
  * operations, and relies on a CRDTService for resolving conflicts in data changes.
  */
+
 import { ZmqService } from '@/zmq/zmq.service';
 import { InjectQueue, Process, Processor } from '@nestjs/bull';
 import { Injectable, Logger } from '@nestjs/common';
@@ -19,8 +22,8 @@ import { Validate } from 'class-validator';
 import { CRDT_QUEUE, BUFFER_CLEANUP_CRON } from '@/consts/consts';
 import { ShardRouterService } from '@/sharding/shardRouter.service';
 
-@Injectable()
 @Processor('crdt')
+@Injectable()
 export class CRDTConsumer {
   private readonly logger = new Logger(CRDTConsumer.name);
 
@@ -43,6 +46,7 @@ export class CRDTConsumer {
         repeat: { cron: BUFFER_CLEANUP_CRON },
       },
     );
+    this.logger.log('Scheduled buffer cleanup cron job.');
   }
 
   /**
@@ -52,7 +56,6 @@ export class CRDTConsumer {
    * @param job - The job containing the `ProcessBufferDto` data.
    */
   @Process('process-buffer')
-  @Validate(ProcessBufferDto)
   async handleProcessBuffer(job: Job<ProcessBufferDto>) {
     try {
       const { isEmptySync, userId } = job.data;
@@ -65,8 +68,10 @@ export class CRDTConsumer {
 
       this.logger.log(`Processing buffer for userId: ${userId}`);
 
-      // Get the shard-specific Prisma client for this user
-      const prisma = await this.shardRouterService.getShardClientForKey(userId);
+      // **Refactored Shard Retrieval**
+      // Determine the shard for the user and retrieve the PrismaClient
+      const shard = this.shardRouterService.getShardForUser(userId);
+      const prisma = this.shardRouterService.getPrismaClient(shard.name);
 
       // Fetch unresolved changes
       const bufferedChanges = await prisma.bufferedChange.findMany({
@@ -112,7 +117,7 @@ export class CRDTConsumer {
 
       // Publish the resolved lists to all the client's subscribers
       await this.zmqService.publishUserLists(userId, lists);
-      this.logger.log('Successfully processed buffer for userId: ${userId}');
+      this.logger.log(`Successfully processed buffer for userId: ${userId}`);
     } catch (error) {
       const err = error as Error;
       this.logger.error('Error processing buffer:', err.stack);
@@ -128,8 +133,10 @@ export class CRDTConsumer {
    */
   private async handleEmptySync(userId: string): Promise<void> {
     try {
-      // Get shard-specific prisma client
-      const prisma = await this.shardRouterService.getShardClientForKey(userId);
+      // **Refactored Shard Retrieval**
+      // Determine the shard for the user and retrieve the PrismaClient
+      const shard = this.shardRouterService.getShardForUser(userId);
+      const prisma = this.shardRouterService.getPrismaClient(shard.name);
 
       const lists = await prisma.list.findMany({
         where: { ownerId: userId },
