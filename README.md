@@ -12,6 +12,7 @@ SDLE Second Assignment of group T2-G16.
 
 ## Folder Structure
 
+
 - [`src`](./src) - The source code
   - [`api`](./src/api) - The API server
   - [`app`](./src/app) - The web app
