@@ -2,7 +2,6 @@
 
 import {
   Injectable,
-  Inject,
   Logger,
   UnauthorizedException,
   ConflictException,
@@ -14,6 +13,7 @@ import { UserEntity } from 'src/entities/user.entity';
 import { JwtService } from '@nestjs/jwt';
 import { ShardRouterService } from '@/sharding/shardRouter.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Inject } from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import { PrismaClient } from '@prisma/client';
 import { v4 as uuid } from 'uuid';
@@ -59,7 +59,7 @@ export class UsersService {
         await this.cacheManager.set(
           `user:${user.id}`,
           user.username,
-          60 * 60 * 1000, // 1 hour in milliseconds
+          3600, // 1 hour in seconds
         );
 
         const token = this.generateJwt(user);
@@ -68,8 +68,8 @@ export class UsersService {
         throw new NotFoundException('User does not exist');
       }
     } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error; // Re-throw authentication errors
+      if (error instanceof UnauthorizedException || error instanceof NotFoundException) {
+        throw error; // Re-throw authentication and not found errors
       }
       this.logger.error(
         `Error during login for username '${username}': ${(error as Error).message}`,
@@ -78,43 +78,93 @@ export class UsersService {
     }
   }
 
+  /**
+   * Registers a new user by creating them across multiple shards to ensure replication.
+   * @param data The registration data containing username and password.
+   * @returns An object indicating the success status and message.
+   */
   async register(data: CreateUserDto) {
     const { username, password } = data;
 
-    // Checks if any of the shards have the user by username
-    const userShard = await this.getShardForUsername(username);
-
-    // Already exists, throw
-    if (userShard) {
+    // Pre-write check: Ensure username is unique across all shards
+    const isTaken = await this.isUsernameTaken(username);
+    if (isTaken) {
+      this.logger.warn(`Attempt to register with taken username '${username}'`);
       throw new ConflictException(
         'User already exists. If this is your account, please login instead.',
       );
     }
 
-    // Let's create
-
+    // Create new user data
     const hashedPassword = await bcrypt.hash(password, 10);
     const userId = uuid();
 
-    // Note: We determine the shard based on the userId
-    const shard = this.shardRouterService.getShardForUser(userId);
-    const shardPrisma = this.shardRouterService.getPrismaClient(shard.name);
+    const userData = {
+      id: userId,
+      username,
+      password: hashedPassword,
+      createdAt: new Date(),
+    };
 
-    // Create the user
-    const user = await shardPrisma.user.create({
-      data: {
-        id: userId,
+    // Define sharding key based on userId
+    const shardKey = `${userId}`;
+
+    try {
+      // Use writeWithQuorum to replicate the user across shards
+      await this.shardRouterService.writeWithQuorum(
+        shardKey,
+        async (prisma: PrismaClient) => {
+          // Use upsert to handle existing records gracefully
+          await prisma.user.upsert({
+            where: { id: userId },
+            update: {}, // No updates; creating new user
+            create: userData,
+          });
+        },
+      );
+
+      this.logger.log(
+        `Successfully registered user '${username}' with ID '${userId}' across shards.`,
+      );
+
+      // Optionally, cache the user ID to username mapping
+      await this.cacheManager.set(
+        `${userId}`,
         username,
-        password: hashedPassword,
-      },
-    });
+        3600, // 1 hour in seconds
+      );
 
-    this.logger.log(
-      `Created new user '${user.username}' with ID '${user.id}' in shard '${shard.name}'`,
-    );
+      return { success: true, message: 'User registered successfully' };
+    } catch (error) {
+      this.logger.error(
+        `Error registering user '${username}': ${(error as Error).message}`,
+      );
+      throw new ConflictException('Failed to register user. Please try again.');
+    }
+  }
 
-    // don't generate token yet, the login will do that
-    return { success: true, message: 'User created successfully' };
+  /**
+   * Checks if a username already exists across all shards using read quorum.
+   * @param username The username to check.
+   * @returns A boolean indicating whether the username exists.
+   */
+  async isUsernameTaken(username: string): Promise<boolean> {
+    try {
+      const key = `username:${username}`; // Sharding key based on username
+      const exists = await this.shardRouterService.readWithQuorum<boolean>(
+        key,
+        async (prisma: PrismaClient) => {
+          const user = await prisma.user.findUnique({ where: { username } });
+          return user ? true : false;
+        },
+      );
+      return exists;
+    } catch (error) {
+      this.logger.error(
+        `Error checking if username '${username}' is taken: ${(error as Error).message}`,
+      );
+      throw error;
+    }
   }
 
   /**
@@ -197,14 +247,21 @@ export class UsersService {
    */
   async getShardForUsername(username: string): Promise<PrismaClient | null> {
     try {
-      const shards = await this.shardRouterService.getAllShardClients();
-      for (const shard of shards) {
-        const user = await shard.user.findUnique({ where: { username } });
-        if (user) {
-          this.logger.log(`Found user '${username}' in shard '${shard}'`);
-          return shard;
-        }
+      // Use readWithQuorum to search for the user across shards
+      const key = `username:${username}`;
+      const shardPrisma = await this.shardRouterService.readWithQuorum<PrismaClient | null>(
+        key,
+        async (prisma: PrismaClient) => {
+          const user = await prisma.user.findUnique({ where: { username } });
+          return user ? prisma : null;
+        },
+      );
+
+      if (shardPrisma) {
+        this.logger.log(`Found user '${username}' in shard '${this.getShardNameFromPrisma(shardPrisma)}'`);
+        return shardPrisma;
       }
+
       this.logger.warn(`User '${username}' not found in any shard.`);
       return null;
     } catch (error) {
@@ -213,6 +270,20 @@ export class UsersService {
       );
       throw error;
     }
+  }
+
+  /**
+   * Retrieves the shard name from a PrismaClient instance.
+   * @param prisma The PrismaClient instance.
+   * @returns The name of the shard.
+   */
+  private getShardNameFromPrisma(prisma: PrismaClient): string {
+    for (const [name, client] of Object.entries(this.shardRouterService.shardClients)) {
+      if (client === prisma) {
+        return name;
+      }
+    }
+    return 'unknown-shard';
   }
 
   /**

@@ -12,7 +12,6 @@ import { Queue } from 'bull';
 import { BufferedChange } from '@prisma/client';
 import { List as ListEntity } from '@/entities';
 import { ShardRouterService } from '@/sharding/shardRouter.service';
-import { UsersService } from '@/users/users.service';
 import { PrismaClient } from '@prisma/client';
 
 /**
@@ -68,11 +67,11 @@ export class CRDTService {
       throw new Error('Invalid or missing user ID');
     }
 
-    // Determine the shard key for replication
-    const shardKey = `list:${existingListId}`;
+    // Define sharding key based on userId for consistency
+    const shardKey = userId; // Direct usage
 
     // Write operations with quorum
-    await this.shardRouterService.writeWithQuorum(shardKey, async (prisma) => {
+    await this.shardRouterService.writeWithQuorum(shardKey, async (prisma: PrismaClient) => {
       const shard = this.shardRouterService.getShardForUser(userId);
       const existingList = await prisma.list.findUnique({
         where: { id: existingListId },
@@ -112,7 +111,6 @@ export class CRDTService {
             updatedAt: sortedChanges[0].changes.updatedAt,
             lastEditorUsername: sortedChanges[0].changes.lastEditorUsername,
           },
-          include: { items: true },
         });
         return;
       }
@@ -203,15 +201,11 @@ export class CRDTService {
       throw new Error('Invalid input for buffering');
     }
 
-    const shardKey = `buffer:${userId}`;
+    // Define sharding key based on userId for consistency
+    const shardKey = userId; // Direct usage
 
     // Write buffered changes with quorum
-    await this.shardRouterService.writeWithQuorum(shardKey, async (prisma) => {
-      // Determine the shards for replication
-      const shards = this.shardRouterService.getShardsForKey(
-        `buffer:${userId}`,
-      );
-
+    await this.shardRouterService.writeWithQuorum(shardKey, async (prisma: PrismaClient) => {
       // Prepare buffered changes
       const changes = lists.map((list) => ({
         userId,
@@ -244,16 +238,19 @@ export class CRDTService {
    * @returns The number of resolved buffer changes that were cleaned up.
    */
   async cleanupResolvedBufferChanges(): Promise<{ count: number }> {
-    const shardKey = `cleanup-resolved`;
+    const shardKey = 'cleanup'; // Use a consistent sharding key format
 
-    // Write cleanup operation with quorum
+    // Initialize total count
     let totalCount = 0;
 
-    await this.shardRouterService.writeWithQuorum(shardKey, async (prisma) => {
+    // Perform cleanup with quorum
+    await this.shardRouterService.writeWithQuorum(shardKey, async (prisma: PrismaClient) => {
       const oneHourAgo = new Date();
       oneHourAgo.setHours(oneHourAgo.getHours() - 1);
 
+      // Iterate through all shard clients
       for (const prismaClient of await this.shardRouterService.getAllShardClients()) {
+        const shardName = this.shardRouterService.getShardNameFromPrisma(prismaClient);
         const result = await prismaClient.bufferedChange.deleteMany({
           where: {
             AND: [{ resolved: true }, { timestamp: { lt: oneHourAgo } }],
@@ -262,7 +259,7 @@ export class CRDTService {
 
         totalCount += result.count;
         this.logger.log(
-          `Cleaned up ${result.count} resolved changes in shard '${prismaClient}'.`,
+          `Cleaned up ${result.count} resolved changes in shard '${shardName}'.`,
         );
       }
     });
@@ -283,7 +280,7 @@ export class CRDTService {
     changes: { changes: ChangePayload }[],
     list: ListEntity,
   ): Promise<string> {
-    // If the list is not yet found, i.e, new list, then its just the last change
+    // If the list is not yet found, i.e., new list, then it's just the last change
     if (!list) {
       return changes[0].changes.name;
     }

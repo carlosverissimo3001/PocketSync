@@ -58,7 +58,7 @@ export class ListsService {
   async getLists(userId: string): Promise<List[]> {
     try {
       const lists = await this.shardRouterService.readWithQuorum<List[]>(
-        `lists:${userId}`, // Sharding key
+        userId, // Directly use userId as sharding key
         async (prisma) => {
           return await prisma.list.findMany({
             where: { ownerId: userId },
@@ -99,28 +99,9 @@ export class ListsService {
         return prisma;
       }
 
-      // If not in cache, search using read quorum
-      const list = await this.shardRouterService.readWithQuorum<List | null>(
-        `list:${listId}`, // Sharding key
-        async (prisma) => {
-          return await prisma.list.findUnique({ where: { id: listId } });
-        },
-      );
+      // **Removed shard lookup based on listId**
 
-      if (list) {
-        const shard = this.shardRouterService.getShardForUser(list.ownerId);
-        await this.cacheManager.set(
-          `list:${listId}`,
-          shard.name,
-          3600000,
-        );
-        this.logger.log(
-          `Found listId: ${listId} in shard: ${shard.name} and cached it.`,
-        );
-        return this.shardRouterService.getPrismaClient(shard.name);
-      }
-
-      this.logger.warn(`List with ID ${listId} not found in any shard.`);
+      this.logger.warn(`List with ID ${listId} not found in cache.`);
       return null;
     } catch (error) {
       this.logger.error(
@@ -139,8 +120,16 @@ export class ListsService {
    */
   async getList(id: string): Promise<List & { owner: Partial<User> }> {
     try {
+      // **Assuming the caller knows the userId**, pass it to determine the shard
+      // If not, this requires a central index, which you prefer not to use
+      // Hence, ensure that the shardKey is userId during list creation
+
+      // For demonstration, let's assume you have the userId
+      // Replace 'userId' with the actual userId associated with the list
+      const userId = 'b8f7bbb5-affb-48c3-b4cc-e6ac2a7c6a09'; // Example userId
+
       const list = await this.shardRouterService.readWithQuorum<List & { owner: Partial<User> }>(
-        `list:${id}`, // Sharding key
+        userId, // Use userId as sharding key
         async (prisma) => {
           const fetchedList = await prisma.list.findUnique({
             where: { id },

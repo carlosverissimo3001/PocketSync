@@ -22,7 +22,7 @@ interface ShardInfo {
 @Injectable()
 export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
   private hashRing: HashRing;
-  private shardClients: Record<string, PrismaClient> = {};
+  public shardClients: Record<string, PrismaClient> = {};
   private readonly logger = new Logger(ShardRouterService.name);
 
   // Quorum parameters
@@ -91,8 +91,22 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Retrieves the shard name corresponding to a given PrismaClient instance.
+   * @param prisma The PrismaClient instance.
+   * @returns The name of the shard or 'unknown-shard' if not found.
+   */
+  public getShardNameFromPrisma(prisma: PrismaClient): string {
+    for (const [name, client] of Object.entries(this.shardClients)) {
+      if (client === prisma) {
+        return name;
+      }
+    }
+    return 'unknown-shard';
+  }
+
+  /**
    * Get the shards responsible for a given key based on replication factor.
-   * @param key The key to hash.
+   * @param key The key to hash (userId).
    * @returns Array of ShardInfo responsible for the key.
    */
   public getShardsForKey(key: string): ShardInfo[] {
@@ -101,7 +115,7 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Get the PrismaClients responsible for a given key.
-   * @param key The key to hash.
+   * @param key The key to hash (userId).
    * @returns Array of PrismaClient instances.
    */
   public getPrismaClientsForKey(key: string): PrismaClient[] {
@@ -110,8 +124,8 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Get the shard responsible for a given key.
-   * @param key The key to hash.
+   * Get the primary shard responsible for a given key.
+   * @param key The key to hash (userId).
    * @returns ShardInfo
    */
   public getShardForKey(key: string): ShardInfo {
@@ -124,7 +138,7 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
    * @returns ShardInfo
    */
   public getShardForUser(userId: string): ShardInfo {
-    return this.getShardForKey(`user:${userId}`);
+    return this.getShardForKey(userId); // Directly use userId
   }
 
   /**
@@ -206,8 +220,6 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-
-
   /**
    * Select a fallback shard for hinted handoff.
    * @param failedShardName The name of the failed shard.
@@ -249,7 +261,7 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Write data to multiple shards with write quorum.
-   * @param key The key to hash.
+   * @param key The key to hash (userId).
    * @param writeFn The write function to execute on each shard.
    */
   public async writeWithQuorum(
@@ -258,6 +270,10 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
   ): Promise<void> {
     const shards = this.getShardsForKey(key);
     let successfulWrites = 0;
+
+    this.logger.log(
+      `Attempting to write to shards: ${shards.map(s => s.name).join(', ')} for key '${key}'`,
+    );
 
     for (const shard of shards) {
       const prisma = this.getPrismaClient(shard.name);
@@ -271,7 +287,7 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
           this.logger.log(
             `Write quorum achieved (${this.W}/${this.W}).`,
           );
-          //break; ensure full replication? not sure
+          // Continue writing to other shards for complete replication
         }
       } catch (error) {
         this.logger.error(
@@ -285,12 +301,16 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
         `Write quorum not achieved for key '${key}'. Required: ${this.W}, Succeeded: ${successfulWrites}.`,
       );
       throw new Error('Write quorum not achieved.');
+    } else {
+      this.logger.log(
+        `Write quorum achieved (${this.W}/${this.W}). Data replicated to ${successfulWrites} out of ${shards.length} shards.`,
+      );
     }
   }
 
   /**
    * Read data from multiple shards with read quorum.
-   * @param key The key to hash.
+   * @param key The key to hash (userId).
    * @param readFn The read function to execute on each shard.
    * @returns The data if quorum is achieved, else null.
    */
@@ -301,6 +321,10 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
     const shards = this.getShardsForKey(key);
     const results: T[] = [];
     let successfulReads = 0;
+
+    this.logger.log(
+      `Attempting to read from shards: ${shards.map(s => s.name).join(', ')} for key '${key}'`,
+    );
 
     for (const shard of shards) {
       const prisma = this.getPrismaClient(shard.name);
