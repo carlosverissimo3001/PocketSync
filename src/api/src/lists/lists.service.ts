@@ -130,9 +130,8 @@ export class ListsService {
   }
 
   /**
-   * Enqueues list changes for processing (for updates and creations).
+   * Enqueues list changes for processing.
    * @param data - The synchronization data containing userId and lists.
-   * @returns - Nothing.
    */
   async enqueueListChanges(data: SyncListsDto) {
     const { userId: requesterId, lists } = data;
@@ -140,51 +139,21 @@ export class ListsService {
     const userId = !isEmptySync ? lists[0].ownerId : requesterId;
 
     if (!isEmptySync) {
-      // Iterate through each list to check existence and create if necessary
-      for (const list of lists) {
-        const exists = await this.checkIfListExists(list.id, userId);
-        if (!exists) {
-          await this.createList({ userId, ...list });
-          this.logger.log(
-            `List '${list.name}' with ID '${list.id}' created for user '${userId}'.`,
-          );
-        }
-      }
-
-      // Buffer the changes related to existing or newly created lists
-      try {
-        await this.crdtService.addToBuffer(userId, lists);
-        this.logger.log(
-          `Buffered ${lists.length} changes for user '${userId}'.`,
-        );
-      } catch (error) {
-        this.logger.error(
-          `Error buffering changes for userId: ${userId}: ${(error as Error).message}`,
-        );
-        throw new Error('Failed to buffer list changes. Please try again.');
-      }
+      await this.crdtService.addToBuffer(userId, lists);
     }
 
-    // Enqueue the buffer processing job if not already queued
     if (await this.crdtService.isJobAlreadyQueuedForUser(userId)) {
       this.logger.log(`Job already queued for userId: ${userId}`);
       return;
     }
 
-    try {
-      await this.crdtQueue.add(
-        'process-buffer',
-        { userId, isEmptySync },
-        JOB_SETTINGS,
-      );
+    await this.crdtQueue.add(
+      'process-buffer',
+      { userId, isEmptySync },
+      JOB_SETTINGS,
+    );
 
-      this.logger.log(`Enqueued 'process-buffer' job for userId: ${userId}`);
-    } catch (error) {
-      this.logger.error(
-        `Error enqueuing buffer job for userId: ${userId}: ${(error as Error).message}`,
-      );
-      throw new Error('Failed to enqueue buffer job. Please try again.');
-    }
+    this.logger.log(`Enqueued 'process-buffer' job for userId: ${userId}`);
   }
 
   /**
@@ -219,26 +188,33 @@ export class ListsService {
 
   /**
    * Retrieves a single list by its ID using read quorum.
+   * If the ownerId is not found in the cache, it searches all shards as a fallback.
    * @param id - The ID of the list.
    * @returns The list with the given ID, including the owner's username.
    * @throws NotFoundException if the list does not exist.
    */
   async getList(id: string): Promise<List & { owner: Partial<User> }> {
     try {
-      // Retrieve the shard key based on listId from cache
-      const cachedUserId: string | undefined = await this.cacheManager.get(
-        `list:${id}`,
-      );
-      if (!cachedUserId) {
-        throw new NotFoundException(`List with ID ${id} not found.`);
+      let ownerId: string | undefined = await this.cacheManager.get(`list:${id}`);
+
+      // If cache miss, fallback to searching all shards
+      if (!ownerId) {
+        this.logger.warn(`Cache miss for listId: ${id}. Searching all shards.`);
+        const listWithOwner = await this.findListInAllShards(id);
+        if (!listWithOwner) {
+          throw new NotFoundException(`List with ID ${id} not found.`);
+        }
+        ownerId = listWithOwner.ownerId;
+
+        // Step 3: Update the cache with the found ownerId
+        await this.cacheManager.set(`list:${id}`, ownerId, LIST_CACHE_TTL);
+        this.logger.log(`Cache updated for listId: ${id} with ownerId: ${ownerId}`);
       }
 
-      // Use readWithQuorum to fetch the list from the correct shards
-      const list = await this.shardRouterService.readWithQuorum<
-        List & { owner: Partial<User> }
-      >(
-        cachedUserId, // Sharding key based on userId
-        async (prisma) => {
+      //  Use readWithQuorum to fetch the list from the correct shard
+      const list = await this.shardRouterService.readWithQuorum<List & { owner: Partial<User> }>(
+        ownerId, // Sharding key based on ownerId
+        async (prisma: PrismaClient) => {
           const fetchedList = await prisma.list.findUnique({
             where: { id },
             include: { items: true },
@@ -266,7 +242,15 @@ export class ListsService {
       );
 
       if (!list) {
-        throw new NotFoundException(`List with ID ${id} not found.`);
+        // If not found in the expected shard, perform a fallback search
+        this.logger.warn(
+          `List with ID ${id} not found in the expected shard based on ownerId: ${ownerId}. Initiating fallback search.`,
+        );
+        const fallbackList = await this.findListInAllShards(id);
+        if (!fallbackList) {
+          throw new NotFoundException(`List with ID ${id} not found.`);
+        }
+        return fallbackList;
       }
 
       return list;
@@ -280,5 +264,48 @@ export class ListsService {
       );
       throw error;
     }
+  }
+
+  /**
+   * Searches for the list across all shards.
+   * @param listId The ID of the list to search for.
+   * @returns The list with owner information if found, else undefined.
+   */
+  private async findListInAllShards(listId: string): Promise<List & { owner: Partial<User> } | undefined> {
+    const shardClients = await this.shardRouterService.getAllShardClients();
+    for (const prisma of shardClients) {
+      try {
+        const fetchedList = await prisma.list.findUnique({
+          where: { id: listId },
+          include: { items: true },
+        });
+
+        if (fetchedList) {
+          const owner = await prisma.user.findUnique({
+            where: { id: fetchedList.ownerId },
+            select: { username: true },
+          });
+
+          if (!owner) {
+            this.logger.warn(
+              `Owner with ID '${fetchedList.ownerId}' not found for listId: ${listId} in shard.`,
+            );
+            return { ...fetchedList, owner: { username: 'Unknown' } };
+          }
+
+          this.logger.log(
+            `Found listId: ${listId} in shard. Owner: ${owner.username}`,
+          );
+
+          return { ...fetchedList, owner };
+        }
+      } catch (error) {
+        this.logger.error(
+          `Error searching for listId '${listId}' in a shard: ${(error as Error).message}`,
+        );
+        // Continue searching other shards
+      }
+    }
+    return undefined;
   }
 }
