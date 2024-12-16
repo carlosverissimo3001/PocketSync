@@ -22,18 +22,18 @@ import { LoadingOverlay } from "@/components/misc/LoadingOverlay";
 import { SYNC_SUCCESS, TOAST_MESSAGES } from "@/utils/toast-messages";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 export const DashboardPage = () => {
+  const [isServerAlive, setIsServerAlive] = useState<boolean>(true);
+  const [isDirty, setIsDirty] = useState(false);
+  // Wishful thinking, but we'll assume the server is always alive :fingers-crossed:
+  const isServerAliveRef = useRef<boolean>(true);
   const { user } = useAuthContext();
   const { initializeUserDB } = useDB();
   const [lists, setLists] = useState<List[]>([]);
   const { mutate: syncLists } = useSyncLists();
+  const { mutate: createList } = useCreateList();
   const { toast } = useToast();
   const { lastSync, fetchLastSync, syncFrequency, setSyncFrequency, updateLastSync } = useSync();
-  // Wishful thinking, but we'll assume the server is always alive :fingers-crossed:
-  const isServerAliveRef = useRef<boolean>(true);
-  const [isServerAlive, setIsServerAlive] = useState<boolean>(true);
-  const [isDirty, setIsDirty] = useState(false);
   const { mutate: fetchLists, isPending } = useFetchLists(user?.id ?? '');
-  const { mutate: createList } = useCreateList();
 
   const fetchFromServer = () => {
     if (user?.id) {
@@ -52,15 +52,12 @@ export const DashboardPage = () => {
       {
         onSuccess: () => {
           toast(TOAST_MESSAGES.SYNC_SENT);
-          // This will happen in the next 30 seconds either way
-          // But this is ok
           if (!isServerAlive) {
             setIsServerAlive(true);
           }
         },
         onError: () => {
           toast(TOAST_MESSAGES.SYNC_FAILED);
-          // Same as above
           if (isServerAlive) {
             setIsServerAlive(false);
           }
@@ -181,13 +178,9 @@ export const DashboardPage = () => {
       items: [],
       lastEditorUsername: user?.username ?? "",
     };
-    // Note: We don't set to dirty here since we will send the list to the server below
-    setIsDirty(false);
-
+  
     // Create list in local DB
     await createListInDB(newList);
-
-    // Update local state
     const updatedLists = await fetchListsWithItems();
     setLists(updatedLists);
 
