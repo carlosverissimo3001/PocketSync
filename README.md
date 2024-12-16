@@ -1,6 +1,6 @@
 # SDLE Second Assignment
 
-SDLE Second Assignment of group T&lt;m&gt;&lt;n&gt;G&lt;p&gt;&lt;q&gt;.
+SDLE Second Assignment of group T2-G16.
 
 ## Group members:
 
@@ -12,12 +12,18 @@ SDLE Second Assignment of group T&lt;m&gt;&lt;n&gt;G&lt;p&gt;&lt;q&gt;.
 
 ## Folder Structure
 
-- [`api`](./api) - The API server
-- [`app`](./app) - The web app
-- [`docs`](./docs) - Documentation
-- [`bridge`](./bridge)
-  - In order to use ZeroMQ to its full extent, we establish a PUB/SUB relationship between the API and a server, that we call "the Bridge".
-  - Then, using Socket.IO, the bridge will forward the messages to the web app.
+- [`src`](./src) - The source code
+  - [`api`](./src/api) - The API server
+  - [`app`](./src/app) - The web app
+  - [`bridge`](./src/bridge) - The bridge server
+- [`doc`](./doc) - Documentation: includes the slides used in the presentation and the initial requirements
+
+## Pre-requisites
+
+- Please make sure you have npm installed. Visit [nodejs.org](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) to download and install it.
+
+> :warning: Please refer to [this folder](https://drive.google.com/drive/folders/1VoiujRZF0um9QeXkzaruPY6qaiNhCme6?usp=drive_link) to acess the environment variables. Use your institution email(`g.uporto.pt`) to access the folder.
+> You will find two `.env` files, one for the API and one for the app. They should be in the root of the respective folder (e.g. `src/api/.env` and `src/app/.env`).
 
 
 ## Run the Backend
@@ -56,6 +62,7 @@ yarn prisma generate
 .\migrate_shards.ps1
 ```
 
+> For linux, you can try running `migrate_shards.sh`. This has not been tested yet, so please report any issues.
 
 6. Start the server
 
@@ -85,6 +92,10 @@ npm run dev
 
 ## Run the Bridge
 
+- In order to use ZeroMQ to its full extent, we establish a PUB/SUB relationship between the API and a server, that we call "the Bridge".
+- Then, using Socket.IO, the bridge will forward the messages to the web app.
+
+
 1. Move into the `bridge` folder
 
 ```sh
@@ -104,6 +115,7 @@ npm start
 ```
 
 ## User Credentials
+
 - test_user
 - E3%hjEzN@WULHM
 <!-- when hashed -> $2a$10$vtRM/PazBJuy9T1rws.sy.6gg8uXLvro1QSL8tulWon8.Da5Ad/.W -->
