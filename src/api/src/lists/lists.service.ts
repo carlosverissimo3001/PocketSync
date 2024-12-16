@@ -4,7 +4,7 @@ import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { List, PrismaClient, User } from '@prisma/client';
-import { JOB_SETTINGS } from '@/consts/consts';
+import { JOB_SETTINGS, LIST_CACHE_TTL } from '@/consts/consts';
 import { CRDTService } from '@/crdt/crdt.service';
 import { ShardRouterService } from '@/sharding/shardRouter.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -56,7 +56,7 @@ export class ListsService {
       );
 
       // Step 2: Cache the listId to userId mapping for efficient lookups
-      await this.cacheManager.set(`list:${listId}`, userId, 3600); // 1 hour TTL
+      await this.cacheManager.set(`list:${listId}`, userId, LIST_CACHE_TTL);
 
       // Step 3: Buffer the initial change related to the list creation
       await this.crdtService.addToBuffer(userId, [
@@ -220,7 +220,6 @@ export class ListsService {
   /**
    * Retrieves a single list by its ID using read quorum.
    * @param id - The ID of the list.
-   * @param userId - The ID of the user owning the list.
    * @returns The list with the given ID, including the owner's username.
    * @throws NotFoundException if the list does not exist.
    */

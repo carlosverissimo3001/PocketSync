@@ -9,6 +9,7 @@ import { BullModule } from '@nestjs/bull';
 import { CRDTModule } from './crdt/crdt.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ShardRouterModule } from './sharding/shardRouter.module';
+import { LIST_CACHE_TTL } from './consts/consts';
 @Module({
   imports: [
     BullModule.forRoot({
@@ -20,7 +21,7 @@ import { ShardRouterModule } from './sharding/shardRouter.module';
     }),
     CacheModule.register({
       isGlobal: true,
-      ttl: 60 * 60 * 1000,
+      ttl: LIST_CACHE_TTL,
       max: 100,
     }),
     CRDTModule,

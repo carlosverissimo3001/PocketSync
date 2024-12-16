@@ -316,9 +316,11 @@ export const DashboardPage = () => {
                         Fetch from Cloud ☁️
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>
-                      Apologies, the server is down right now. Your data is still safe locally.
-                    </TooltipContent>
+                    {!isServerAlive && (
+                      <TooltipContent>
+                        Apologies, the server is down right now. Your data is still safe locally.
+                      </TooltipContent>
+                    )}
                   </Tooltip>
                 </TooltipProvider>
               </div>

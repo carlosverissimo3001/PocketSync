@@ -90,7 +90,6 @@ export const handleListInsertions = async (
         });
       }
     );
-
-    await updateLastSync(receivedLists.length);
   }
+  await updateLastSync(receivedLists.length);
 };
