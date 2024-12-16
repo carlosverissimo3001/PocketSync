@@ -1,6 +1,9 @@
+// src/lists/lists.controller.ts
+
 import { Controller, Post, Body, Get, Param } from '@nestjs/common';
 import { ListsService } from './lists.service';
 import { SyncListsDto } from '@/dtos/sync-lists.dto';
+import { CreateListDto } from '@/dtos/create-list.dto'; // Import the DTO
 
 @Controller('lists')
 export class ListsController {
@@ -11,6 +14,7 @@ export class ListsController {
    * @param body - A DTO containing a user ID and an array of lists.
    * @returns - Nothing.
    */
+  
   @Post()
   async enqueueListChanges(@Body() body: SyncListsDto) {
     return this.listsService.enqueueListChanges(body);
@@ -40,10 +44,11 @@ export class ListsController {
   /**
    * Get a single list by ID.
    * @param id - The ID of the list.
+   * @param userId - The ID of the user owning the list.
    * @returns - A single list.
    */
-  @Get(':id')
-  async getList(@Param('id') id: string) {
-    return this.listsService.getList(id);
+  @Get('user/:userId')
+  async getList(@Param('id') id: string, @Param('userId') userId: string) {
+    return this.listsService.getList(id, userId);
   }
 }

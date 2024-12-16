@@ -107,7 +107,7 @@ export class UsersService {
     };
 
     // Define sharding key based on userId
-    const shardKey = `${userId}`;
+    const shardKey = userId;
 
     try {
       // Use writeWithQuorum to replicate the user across shards

@@ -68,7 +68,7 @@ export class CRDTService {
     }
 
     // Define sharding key based on userId for consistency
-    const shardKey = userId; // Direct usage
+    const shardKey = userId; 
 
     // Write operations with quorum
     await this.shardRouterService.writeWithQuorum(shardKey, async (prisma: PrismaClient) => {

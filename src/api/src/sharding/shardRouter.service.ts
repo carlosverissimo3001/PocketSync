@@ -138,7 +138,7 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
    * @returns ShardInfo
    */
   public getShardForUser(userId: string): ShardInfo {
-    return this.getShardForKey(userId); // Directly use userId
+    return this.getShardForKey(userId); 
   }
 
   /**
@@ -221,45 +221,6 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Select a fallback shard for hinted handoff.
-   * @param failedShardName The name of the failed shard.
-   * @returns A fallback ShardInfo or null.
-   */
-  private selectFallbackShard(failedShardName: string): ShardInfo | null {
-    const allShards = Object.values(this.shardClients);
-    const sortedShardKeys = this.hashRing.getSortedKeys();
-    const ring = this.hashRing.getRing();
-
-    // Find all virtual nodes for the failed shard
-    const virtualNodes = sortedShardKeys.filter(
-      (pos) => ring.get(pos)?.name === failedShardName,
-    );
-
-    if (virtualNodes.length === 0) {
-      this.logger.warn(`No virtual nodes found for shard ${failedShardName}`);
-      return null;
-    }
-
-    // Choose the next shard in the ring after the last virtual node of the failed shard
-    const lastVirtualPos = virtualNodes[virtualNodes.length - 1];
-    const index = sortedShardKeys.indexOf(lastVirtualPos);
-    let fallbackIndex = (index + 1) % sortedShardKeys.length;
-
-    while (fallbackIndex !== index) {
-      const fallbackShard = ring.get(sortedShardKeys[fallbackIndex]);
-      if (fallbackShard && fallbackShard.name !== failedShardName) {
-        return fallbackShard;
-      }
-      fallbackIndex = (fallbackIndex + 1) % sortedShardKeys.length;
-    }
-
-    this.logger.warn(
-      `No suitable fallback shard found for failed shard ${failedShardName}`,
-    );
-    return null;
-  }
-
-  /**
    * Write data to multiple shards with write quorum.
    * @param key The key to hash (userId).
    * @param writeFn The write function to execute on each shard.
@@ -267,35 +228,32 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
   public async writeWithQuorum(
     key: string,
     writeFn: (prisma: PrismaClient) => Promise<void>,
-  ): Promise<void> {
+  ): Promise<ShardInfo[]> { // Return successful shards
     const shards = this.getShardsForKey(key);
     let successfulWrites = 0;
-
+    const successfulShards: ShardInfo[] = [];
+  
     this.logger.log(
       `Attempting to write to shards: ${shards.map(s => s.name).join(', ')} for key '${key}'`,
     );
-
+  
     for (const shard of shards) {
       const prisma = this.getPrismaClient(shard.name);
       try {
         await writeFn(prisma);
         successfulWrites += 1;
+        successfulShards.push(shard);
         this.logger.log(
           `Write succeeded on shard '${shard.name}' for key '${key}'.`,
         );
-        if (successfulWrites >= this.W) {
-          this.logger.log(
-            `Write quorum achieved (${this.W}/${this.W}).`,
-          );
-          // Continue writing to other shards for complete replication
-        }
+        // Continue writing to other shards for complete replication
       } catch (error) {
         this.logger.error(
           `Write failed on shard '${shard.name}' for key '${key}': ${(error as Error).message}`,
         );
       }
     }
-
+  
     if (successfulWrites < this.W) {
       this.logger.error(
         `Write quorum not achieved for key '${key}'. Required: ${this.W}, Succeeded: ${successfulWrites}.`,
@@ -305,6 +263,7 @@ export class ShardRouterService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(
         `Write quorum achieved (${this.W}/${this.W}). Data replicated to ${successfulWrites} out of ${shards.length} shards.`,
       );
+      return successfulShards; // Return the shards where write was successful
     }
   }
 

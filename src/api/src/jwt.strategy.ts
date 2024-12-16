@@ -13,7 +13,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload): Promise<JwtPayload> {
-    return payload;
+  async validate(payload: JwtPayload): Promise<{ id: string; username: string }> {
+    if (!payload.id || !payload.username) {
+      throw new Error('Invalid token payload');
+    }
+    return { id: payload.id, username: payload.username }; // Attach the user details to req.user
   }
 }

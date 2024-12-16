@@ -1,3 +1,4 @@
+import { createList } from "@/db/db-utils";
 import api from "../api/axios";
 import { List, ListExtended } from "../types/list.types";
 
@@ -10,6 +11,10 @@ export const listService = {
   getList: async (id: string): Promise<ListExtended> => {
     const { data } = await api.get<ListExtended>(`/lists/${id}`);
     return data;
+  },
+
+  createList: async (list: List): Promise<void> => {
+    await api.post("/lists/create", list);
   },
 
   syncLists: async (lists: List[], userId: string): Promise<void> => {
