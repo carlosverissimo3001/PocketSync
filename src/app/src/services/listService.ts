@@ -1,6 +1,5 @@
-import { createList } from "@/db/db-utils";
 import api from "../api/axios";
-import { List, ListExtended } from "../types/list.types";
+import { CreateListDto, List, ListExtended } from "../types/list.types";
 
 export const listService = {
   getListsForUser: async (userId: string): Promise<List[]> => {
@@ -13,8 +12,8 @@ export const listService = {
     return data;
   },
 
-  createList: async (list: List): Promise<void> => {
-    await api.post("/lists/create", list);
+  createList: async (data: CreateListDto): Promise<void> => {
+    await api.post("/lists/create", data);
   },
 
   syncLists: async (lists: List[], userId: string): Promise<void> => {

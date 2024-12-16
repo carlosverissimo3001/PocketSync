@@ -1,7 +1,7 @@
 import { Clock, ChevronUp, Info, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { xTimeAgo } from "@/utils/date";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -28,6 +28,18 @@ export const SyncComponent = ({
   isServerAlive,
 }: SyncComponentProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [timeAgo, setTimeAgo] = useState<string>(lastSync ? xTimeAgo(lastSync) : "Never");
+  useEffect(() => {
+    if (!lastSync) return;
+
+    setTimeAgo(xTimeAgo(lastSync));
+
+    const interval = setInterval(() => {
+      setTimeAgo(xTimeAgo(lastSync));
+    }, 30000); // Update every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [lastSync]);
 
   return (
     <div className="fixed bottom-4 right-4">
@@ -82,7 +94,7 @@ export const SyncComponent = ({
                 Last sync
               </span>
               <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">
-                {lastSync ? xTimeAgo(lastSync) : "Never"}
+                {timeAgo}
               </span>
             </div>
             <div className="flex items-center gap-1.5">

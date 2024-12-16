@@ -64,7 +64,7 @@ export const getLastSync = async () => {
 
 export const handleListInsertions = async (
   receivedLists: List[],
-  updateLastSync: (length: number) => void
+  updateLastSync: (length: number) => Promise<void>
 ) => {
   const db = getCurrentDB();
   if (receivedLists.length !== 0) {
@@ -91,6 +91,6 @@ export const handleListInsertions = async (
       }
     );
 
-    updateLastSync(receivedLists.length);
+    await updateLastSync(receivedLists.length);
   }
 };

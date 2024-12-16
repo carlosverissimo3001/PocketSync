@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { listService } from "@/services/listService";
-import { List } from "@/types/list.types";
+import { CreateListDto, List } from "@/types/list.types";
 import { useSync } from "@/contexts/SyncContext";
 
 export const useList = (id: string) => {
@@ -23,6 +23,13 @@ export const useUpdateList = () => {
     mutationKey: ["updateList"],
     mutationFn: ({ list, userId }: { list: List; userId: string }) =>
       listService.updateList(list, userId),
+  });
+};
+
+export const useCreateList = () => {
+  return useMutation({
+    mutationKey: ["createList"],
+    mutationFn: (data: CreateListDto) => listService.createList(data),
   });
 };
 

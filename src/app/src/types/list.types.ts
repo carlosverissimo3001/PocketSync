@@ -1,7 +1,13 @@
 import { User } from "./auth.types";
 
+export interface CreateListDto {
+  userId: string;
+  name: string;
+  lastEditorUsername?: string;
+}
+
 export interface List {
-    id: string;
+  id: string;
     name: string;
     createdAt?: Date;
     ownerId: string;

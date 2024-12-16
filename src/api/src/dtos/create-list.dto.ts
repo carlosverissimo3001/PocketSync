@@ -1,19 +1,15 @@
-// src/dtos/create-list.dto.ts
-
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
-
+import { IsString, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 export class CreateListDto {
+  @IsString()
+  @IsNotEmpty()
+  @IsUUID()
+  userId: string;
+
   @IsString()
   @IsNotEmpty()
   name: string;
 
   @IsString()
-  @IsNotEmpty()
-  ownerId: string;
-
-  @IsString()
   @IsOptional()
   lastEditorUsername?: string;
-  
-  // Add other fields as necessary
 }

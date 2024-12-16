@@ -5,14 +5,14 @@ import { useEffect, useState, useRef } from "react";
 import { NewListCard } from "@/components/list/NewListCard";
 import {
   fetchListsWithItems,
-  createList,
+  createList as createListInDB,
   updateList,
   deleteList,
   handleListInsertions,
 } from "@/db/db-utils";
 import { ListCard } from "@/components/list/ListCard";
 import { SyncComponent } from "@/components/misc/SyncComponent";
-import { useFetchLists, useSyncLists } from "@/hooks/useList";
+import { useCreateList, useFetchLists, useSyncLists } from "@/hooks/useList";
 import { useToast } from "@/hooks/useToast";
 import useSubscriber from "@/hooks/useSubscriber";
 import { useSync } from "@/contexts/SyncContext";
@@ -33,6 +33,7 @@ export const DashboardPage = () => {
   const [isServerAlive, setIsServerAlive] = useState<boolean>(true);
   const [isDirty, setIsDirty] = useState(false);
   const { mutate: fetchLists, isPending } = useFetchLists(user?.id ?? '');
+  const { mutate: createList } = useCreateList();
 
   const fetchFromServer = () => {
     if (user?.id) {
@@ -68,7 +69,6 @@ export const DashboardPage = () => {
     );
   };
 
-  
   // Initialize DB when user is available
   useEffect(() => {
     const init = async () => {
@@ -181,16 +181,40 @@ export const DashboardPage = () => {
       items: [],
       lastEditorUsername: user?.username ?? "",
     };
+    // Note: We don't set to dirty here since we will send the list to the server below
+    setIsDirty(false);
 
-    await createList(newList);
+    // Create list in local DB
+    await createListInDB(newList);
+
+    // Update local state
     const updatedLists = await fetchListsWithItems();
     setLists(updatedLists);
-    setIsDirty(true);
-    toast({
-      title: `List "${newList.name}" created successfully!`,
-      description: "Start adding items to your list",
-      duration: 3000,
-    });
+
+
+    createList({
+      userId: user?.id ?? '',
+      name: newList.name,
+      lastEditorUsername: user?.username ?? '',
+    },
+    {
+      onSuccess: () => {
+        toast({
+          title: `List "${newList.name}" created in cloud successfully!`,
+          description: "Start adding items to your list",
+          duration: 3000,
+        });
+      },
+      onError: () => {
+        toast({
+          title: "Offline mode",
+          description: "List saved locally, will sync when connection is restored",
+          variant: "warning",
+          duration: 3000,
+        });
+      }
+    }
+    );
   };
 
   const updateListHandler = async (list: List) => {
