@@ -32,14 +32,19 @@ Made in Collaboration with:
 
 - Please make sure you have npm installed. Visit [nodejs.org](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) to download and install it.
 
-> :warning: Please refer to [this folder](https://drive.google.com/drive/folders/1VoiujRZF0um9QeXkzaruPY6qaiNhCme6?usp=drive_link) to acess the environment variables. Use your institution email(`g.uporto.pt`) to access the folder.
-> You will find two `.env` files, one for the API and one for the app. They should be in the root of the respective folder (e.g. `src/api/.env` and `src/app/.env`).
-
 ## Resources
 
 - The Slides used in the presentation are in the [doc](./doc) folder
 - The [Demo](https://www.loom.com/share/5242996b3ba8420791ff370f23848571?sid=21234c40-32ed-4b61-8570-5994f43dfa86) video
 - A [video](https://www.loom.com/share/dea65df9a8e44719a003c156038c9d5f?sid=b8c651d2-741c-452c-a928-ea3d4182379f) denoting the use cases
+
+## Environment Setup
+
+> :warning: To replicate the project, please ensure you have:
+> - A valid connection string to a PostgreSQL server
+> - A Redis connection for Bull jobs (you can create a free database at [redis.io](https://redis.io/))
+
+Refer to the example .env files in the the [app](src/app/.env.example) and the [api](src/api/.env.example)
 
 ## Run the Backend
 
