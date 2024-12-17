@@ -1,14 +1,23 @@
-# SDLE Second Assignment
+# PocketSync
 
-SDLE Second Assignment of group T2-G16.
+**Large Scale Distributed Systems Final Project**
 
-## Group members:
+This repository features a **local-first list application** that demonstrates principles of distributed systems, including **data sharding**, **replication**, and **conflict-free resolution (CRDT)** for large-scale environments. The app prioritizes offline functionality while ensuring consistency through robust sync mechanisms.
 
-| #   | Name             | Email                                         |
-| --- | ---------------- | --------------------------------------------- |
-| 1.  | Carlos Veríssimo | [up201907716@up.pt](mailto:up202008867@up.pt) |
-| 2.  | João Felix       | [up202008867@up.pt](mailto:up202008867@up.pt) |
-| 3.  | José Costa       | [up202004823@up.pt](mailto:up202008867@up.pt) |
+**Key Features:**
+
+- **Local-First Approach**: Data is stored and managed locally for fast, reliable access.
+- **Periodic Syncing**: Automatic batch updates with server syncs to ensure data consistency.
+- **Conflict-Free Resolution**: Resolves changes intelligently across multiple devices.
+- **Data Sharding**: Horizontally scales data across multiple servers using consistent hashing for even distribution.
+- **Replication**: Redundant copies (N=3) ensure fault tolerance and reliability.
+- **Read/Write Quorum**: Guarantees data consistency and integrity with majority-based operations (W=R=2).
+
+This project highlights modern techniques like consistent hashing, quorum reads/writes, eventual consistency, and redundancy to handle distributed, large-scale data efficiently
+
+Made in Collaboration with:
+- [João Félix](https://github.com/joao12520)
+- [José Costa](https://github.com/JaySuave)
 
 ## Folder Structure
 
